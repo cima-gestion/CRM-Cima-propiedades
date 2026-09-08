@@ -7523,7 +7523,7 @@ async function openEmailViewModal(folder, uid, fallback){
   overlay.classList.add('active');
   if(!supabaseClient) return;
   try{
-    const { data, error } = await supabaseClient.functions.invoke('listar-correo', { body: { folder, uid }, headers: { 'x-region': 'us-east-1' } });
+    const { data, error } = await supabaseClient.functions.invoke('listar-correo', { body: { folder, uid }, region: 'us-east-1' });
     if(error) throw error;
     const d = data?.detail;
     if(!d){ body.textContent = 'No se pudo leer el contenido de este correo.'; return; }
@@ -7571,7 +7571,7 @@ async function renderCRMInboxEmailFolder(box, recibidosCount){
   wireEmailFolderTabs(box);
   if(!supabaseClient) return;
   try{
-    const { data, error } = await supabaseClient.functions.invoke('listar-correo', { body: { folder: crmEmailFolderTab, limit: 25 }, headers: { 'x-region': 'us-east-1' } });
+    const { data, error } = await supabaseClient.functions.invoke('listar-correo', { body: { folder: crmEmailFolderTab, limit: 25 }, region: 'us-east-1' });
     if(error) throw error;
     // El usuario pudo haber cambiado de pestaña mientras esperábamos.
     if(crmEmailFolderTab==='recibidos') return;
