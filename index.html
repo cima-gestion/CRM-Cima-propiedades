@@ -1345,6 +1345,7 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
 
     <div class="crm-view" id="crm-add">
       <button type="button" class="ghost small" id="btnBackFromLeadPanel" style="margin-bottom:14px;">← Volver al tablero</button>
+      <button type="button" class="ghost small" id="btnToggleArchiveLead" style="margin-bottom:14px; margin-left:8px; display:none;">📥 Archivar</button>
       <div class="card" id="leadImportCard">
         <div class="crm-page-head"><div><h3>➕ Añadir contacto</h3><div class="hint">Puedes registrar manualmente o importar desde texto. La propiedad queda vinculada al seguimiento para poder revisarla después.</div></div></div>
         <div class="crm-subnav" style="margin-bottom:12px;">
@@ -1356,7 +1357,7 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
           <div class="crm-edit-banner" id="crmEditBanner">Editando contacto: <strong id="crmEditBannerName"></strong>. Los cambios reemplazarán los datos del contacto existente.</div>
           <div class="row">
             <div class="field"><label>Nombre del cliente</label><input type="text" id="leadName" placeholder="Ej: Camila Soto"></div>
-            <div class="field"><label>Canal</label><select id="leadChannel"><option>WhatsApp</option><option>Facebook</option><option>Yapo</option><option>Proppit</option><option>TocToc</option><option>Otro</option></select></div>
+            <div class="field"><label>Canal</label><select id="leadChannel"><option>WhatsApp</option><option>Facebook</option><option>Yapo</option><option>Proppit</option><option>TocToc</option><option>Correo</option><option>Otro</option></select></div>
             <div class="field" id="leadPhoneField"><label>Número de WhatsApp</label><input type="text" id="leadPhone" placeholder="Ej: +56 9 1234 5678"></div>
             <div class="field"><label>Busca</label><select id="leadOperation"><option>Arriendo</option><option>Venta</option></select></div>
           </div>
@@ -1651,6 +1652,9 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
         <div class="crm-toolbar">
           <input id="crmAllLeadsSearch" type="search" placeholder="🔎 Buscar por nombre, teléfono o propiedad...">
           <select id="crmAllLeadsStageFilter"><option value="all">Todas las etapas</option></select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-dim);white-space:nowrap;">
+            <input type="checkbox" id="crmAllLeadsShowArchived"> Ver archivados
+          </label>
         </div>
         <div class="kommo-table-wrap">
           <table class="kommo-table">
@@ -2045,6 +2049,7 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
       <button class="primary" id="btnQuickAddSave">Guardar contacto</button>
     </div>
   </div>
+</div>
 
 <!-- ALERTA: contactos nuevos llegados por correo, pendientes de revisar -->
 <div class="quick-add-overlay" id="emailAlertOverlay">
@@ -2311,7 +2316,7 @@ async function saveToCloud(){
     jobs.push(supabaseClient.from('properties').upsert(state.properties.map(propertyRow),{onConflict:'id'})); jobTables.push('properties');
     const pp=state.properties.flatMap(platformRows); if(pp.length){ jobs.push(supabaseClient.from('property_platforms').upsert(pp,{onConflict:'property_id,platform'})); jobTables.push('property_platforms'); }
     const ph=state.properties.flatMap(historyRows); if(ph.length){ jobs.push(supabaseClient.from('property_price_history').upsert(ph,{onConflict:'id'})); jobTables.push('property_price_history'); }
-    jobs.push(supabaseClient.from('leads').upsert((state.leads||[]).map(x=>({id:x.id,name:x.name||'',phone:x.phone||null,notes:x.notes||null,stage:x.stage||null,status:x.status||null,channel:x.channel||null,property:x.property||null,property_id:x.propertyId||null,operation:x.operation||null,price_label:x.priceLabel||null,first_contact:x.firstContact||null,last_contact:x.lastContact||null,next_contact:x.nextContact||null,collapsed:!!x.collapsed,assigned_to:x.assignedTo||null,conversation:x.conversation||null,email_reviewed:x.emailReviewed===false?false:true,updated_at:(x.updatedAt?dbDate(x.updatedAt):null)||x.lastContact||x.firstContact||new Date().toISOString()})),{onConflict:'id'})); jobTables.push('leads');
+    jobs.push(supabaseClient.from('leads').upsert((state.leads||[]).map(x=>({id:x.id,name:x.name||'',phone:x.phone||null,notes:x.notes||null,stage:x.stage||null,status:x.status||null,channel:x.channel||null,property:x.property||null,property_id:x.propertyId||null,operation:x.operation||null,price_label:x.priceLabel||null,first_contact:x.firstContact||null,last_contact:x.lastContact||null,next_contact:x.nextContact||null,collapsed:!!x.collapsed,assigned_to:x.assignedTo||null,conversation:x.conversation||null,email_reviewed:x.emailReviewed===false?false:true,archived:!!x.archived,updated_at:(x.updatedAt?dbDate(x.updatedAt):null)||x.lastContact||x.firstContact||new Date().toISOString()})),{onConflict:'id'})); jobTables.push('leads');
     jobs.push(supabaseClient.from('folders').upsert((state.folders||[]).map(name=>({name})),{onConflict:'name'})); jobTables.push('folders');
     jobs.push(supabaseClient.from('platforms').upsert((state.platforms||[]).map(name=>({name})),{onConflict:'name'})); jobTables.push('platforms');
     const templates=[]; Object.entries(state.templates||{}).forEach(([platform,list])=>(Array.isArray(list)?list:[]).forEach(t=>templates.push({id:t.id||uid(),platform,title:t.title||null,text:t.text||null,shortcut:t.shortcut||null,collapsed:!!t.collapsed})));
@@ -2322,7 +2327,7 @@ async function saveToCloud(){
     if(bad){
       console.error(`❌ ERROR REAL DE SUPABASE en la tabla "${jobTables[badIndex]}" (texto completo): `+describeSupabaseError(bad.error));
     }
-    if(bad && jobTables[badIndex]==='leads' && /next_contact|property_id|conversation|updated_at|email_reviewed|price_label/i.test(describeSupabaseError(bad.error))){
+    if(bad && jobTables[badIndex]==='leads' && /next_contact|property_id|conversation|updated_at|email_reviewed|price_label|archived/i.test(describeSupabaseError(bad.error))){
       console.warn('La tabla leads aún no tiene las columnas nuevas; guardando compatibilidad legacy. Detalle: '+describeSupabaseError(bad.error));
       const legacyLeads=(state.leads||[]).map(x=>({id:x.id,name:x.name||'',phone:x.phone||null,notes:x.notes||null,stage:x.stage||null,status:x.status||null,channel:x.channel||null,property:x.property||null,operation:x.operation||null,first_contact:x.firstContact||null,last_contact:x.lastContact||null,collapsed:!!x.collapsed}));
       const retry=await supabaseClient.from('leads').upsert(legacyLeads,{onConflict:'id'});
@@ -2343,7 +2348,7 @@ async function loadFromCloud(){
     const all=[pr,pp,ph,le,fo,pl,te,as,bi]; const bad=all.find(r=>r.error); if(bad) throw bad.error;
     const settingsRow=as.data||{}; const st=settingsRow.settings||{};
     const leadFollowups=st.leadFollowups||{};
-    const remoteLeads=(le.data||[]).map(x=>{const extra=leadFollowups[x.id]||{};return {id:x.id,name:x.name,phone:x.phone,notes:x.notes,stage:x.stage,status:x.status,channel:x.channel,property:x.property,propertyId:x.property_id||extra.propertyId||null,operation:x.operation,priceLabel:x.price_label||null,firstContact:x.first_contact,lastContact:x.last_contact,nextContact:x.next_contact||extra.nextContact||null,collapsed:x.collapsed,assignedTo:x.assigned_to||null,conversation:x.conversation||null,emailReviewed:x.email_reviewed===false?false:true,updatedAt:x.updated_at?new Date(x.updated_at).getTime():null};});
+    const remoteLeads=(le.data||[]).map(x=>{const extra=leadFollowups[x.id]||{};return {id:x.id,name:x.name,phone:x.phone,notes:x.notes,stage:x.stage,status:x.status,channel:x.channel,property:x.property,propertyId:x.property_id||extra.propertyId||null,operation:x.operation,priceLabel:x.price_label||null,firstContact:x.first_contact,lastContact:x.last_contact,nextContact:x.next_contact||extra.nextContact||null,collapsed:x.collapsed,assignedTo:x.assigned_to||null,conversation:x.conversation||null,emailReviewed:x.email_reviewed===false?false:true,archived:!!x.archived,updatedAt:x.updated_at?new Date(x.updated_at).getTime():null};});
     const remote={properties:(pr.data||[]).map(r=>rowToProperty(r,pp.data||[],ph.data||[])),leads:remoteLeads,folders:(fo.data||[]).map(x=>x.name),platforms:(pl.data||[]).map(x=>x.name),templates:{whatsapp:[],facebook:[]},settings:st.settings||{},collapsedFolders:st.collapsedFolders||{},sortOrder:settingsRow.sort_order||'',bitacora:(bi.data||[]).map(x=>x.data||{id:x.id,date:x.entry_date,activity:x.activity}),platformUrls:st.platformUrls||{},platformCharLimits:st.platformCharLimits||{},republicationLog:st.republicationLog||[]};
     (te.data||[]).forEach(x=>{if(!remote.templates[x.platform]) remote.templates[x.platform]=[]; remote.templates[x.platform].push({id:x.id,title:x.title,text:x.text,shortcut:x.shortcut,collapsed:x.collapsed});});
     applyingCloudData=true; try{applyImportedData(remote,true);}finally{applyingCloudData=false;}
@@ -2469,6 +2474,17 @@ function stageInfo(stage){
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function touchLead(lead){ if(lead) lead.updatedAt=Date.now(); return lead; }
+async function toggleLeadArchived(lead, archived){
+  if(!lead) return;
+  lead.archived = !!archived;
+  touchLead(lead);
+  saveState();
+  renderCRM();
+  if(supabaseClient){
+    try{ await supabaseClient.from('leads').update({ archived: !!archived }).eq('id', lead.id); }
+    catch(e){ console.error('No se pudo archivar/desarchivar el lead en la nube:', e); }
+  }
+}
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 
 function daysBetween(a, b){
@@ -5443,12 +5459,13 @@ function renderLeadCard(lead, compact=false){
     ${!closed?`<div class="crm-urgency ${meta.cls}">📅 ${escapeHtml(meta.label)} · ${escapeHtml(relativeContactText(next))}</div>`:''}
     ${lead.notes&&!compact?`<div class="hint" style="margin-top:8px;">📝 ${escapeHtml(lead.notes)}</div>`:''}
     <div class="crm-actions">
-      ${wa?`<a class="whatsapp-link" href="${wa}" target="cimaWhatsApp" rel="noopener">💬 WhatsApp</a>`:''}
+      ${wa?`<a class="whatsapp-link btn-wa-lead-link" data-lead="${lead.id}" href="${wa}" target="cimaWhatsApp" rel="noopener">💬 WhatsApp</a>`:''}
       ${tel?`<a class="ghost small" href="${tel}">📞 Llamar</a>`:''}
       ${lead.conversation?`<button class="ghost small btn-view-conversation" data-lead="${lead.id}">📜 Ver conversación</button>`:''}
       <button class="ghost small btn-edit-lead" data-lead="${lead.id}">Editar</button>
       ${!closed?`<button class="ghost small btn-contacted-lead" data-lead="${lead.id}">✓ Contactado</button>`:''}
       ${!closed?`<button class="ghost small btn-close-lead" data-lead="${lead.id}">Cerrar</button>`:`<button class="ghost small btn-reopen-lead" data-lead="${lead.id}">Reabrir</button>`}
+      <button class="ghost small btn-archive-lead" data-lead="${lead.id}">${lead.archived?'↩️ Desarchivar':'📥 Archivar'}</button>
       <button class="ghost small danger btn-remove-lead" data-lead="${lead.id}">Eliminar</button>
     </div>
   </div>`;
@@ -5462,6 +5479,7 @@ function resetLeadEditor(){
   const name=document.getElementById("crmEditBannerName"); if(name) name.textContent="";
   const conv=document.getElementById("leadConversation"); if(conv) conv.value="";
   const convStatus=document.getElementById("leadConversationStatus"); if(convStatus) convStatus.textContent="";
+  const archiveBtn=document.getElementById("btnToggleArchiveLead"); if(archiveBtn) archiveBtn.style.display="none";
 }
 let leadEditorReturnView = 'crm-board';
 function openLeadEditor(lead){
@@ -5482,8 +5500,17 @@ function openLeadEditor(lead){
   const banner=document.getElementById('crmEditBanner'); if(banner) banner.classList.add('active');
   const bannerName=document.getElementById('crmEditBannerName'); if(bannerName) bannerName.textContent=lead.name||'Sin nombre';
   updateLeadPhoneVisibility();
+  const archiveBtn=document.getElementById('btnToggleArchiveLead');
+  if(archiveBtn){ archiveBtn.style.display='inline-block'; archiveBtn.textContent = lead.archived ? '↩️ Desarchivar' : '📥 Archivar'; }
   showToast('Contacto cargado para editar. Cambia los datos y guarda los cambios.');
 }
+document.getElementById('btnToggleArchiveLead')?.addEventListener('click', ()=>{
+  const lead=(state.leads||[]).find(l=>l.id===crmEditingLeadId); if(!lead) return;
+  toggleLeadArchived(lead, !lead.archived);
+  const archiveBtn=document.getElementById('btnToggleArchiveLead');
+  if(archiveBtn) archiveBtn.textContent = lead.archived ? '↩️ Desarchivar' : '📥 Archivar';
+  showToast(lead.archived ? 'Contacto archivado.' : 'Contacto restaurado.');
+});
 function bindLeadActions(container){
   container.querySelectorAll('.btn-view-conversation').forEach(btn=>btn.addEventListener('click',()=>{
     const lead=state.leads.find(l=>l.id===btn.dataset.lead); if(lead) openConversationModal(lead);
@@ -5506,6 +5533,18 @@ function bindLeadActions(container){
   container.querySelectorAll('.btn-remove-lead').forEach(btn=>btn.addEventListener('click',()=>{
     if(!confirm('¿Eliminar este contacto?'))return;
     state.leads=state.leads.filter(l=>l.id!==btn.dataset.lead);saveState();renderCRM();renderEstadisticas();
+  }));
+  container.querySelectorAll('.btn-archive-lead').forEach(btn=>btn.addEventListener('click',()=>{
+    const lead=state.leads.find(l=>l.id===btn.dataset.lead); if(!lead) return;
+    toggleLeadArchived(lead, !lead.archived);
+    showToast(lead.archived ? 'Contacto archivado 📥' : 'Contacto restaurado ↩️');
+  }));
+  container.querySelectorAll('.btn-wa-lead-link').forEach(a=>a.addEventListener('click',()=>{
+    const lead=state.leads.find(l=>l.id===a.dataset.lead); if(!lead || lead.archived) return;
+    // Al escribirle por WhatsApp (aunque sea el link manual, no la API),
+    // se archiva solo — así el tablero se va quedando solo con lo que
+    // falta contactar.
+    toggleLeadArchived(lead, true);
   }));
   container.querySelectorAll('.btn-edit-lead, .btn-view-lead').forEach(btn=>btn.addEventListener('click',()=>{
     const lead=state.leads.find(l=>l.id===btn.dataset.lead); openLeadEditor(lead);
@@ -5640,6 +5679,7 @@ function crmBoardFilterLeads(leads){
   const f = window.crmBoardFilters;
   const q = (f.search||'').trim().toLowerCase();
   return leads.filter(l=>{
+    if(l.archived) return false;
     if(f.hideClosed && stageIsClosed(l.stage)) return false;
     if(f.channel!=='all' && (l.channel||'')!==f.channel) return false;
     if(f.agent!=='all' && (l.assignedTo||'')!==f.agent) return false;
@@ -6005,18 +6045,22 @@ function renderCRMAllLeads(){
   }
   const searchEl=document.getElementById('crmAllLeadsSearch');
   if(searchEl && !searchEl.dataset.bound){ searchEl.dataset.bound='1'; searchEl.addEventListener('input', renderCRMAllLeads); }
+  const archivedEl=document.getElementById('crmAllLeadsShowArchived');
+  if(archivedEl && !archivedEl.dataset.bound){ archivedEl.dataset.bound='1'; archivedEl.addEventListener('change', renderCRMAllLeads); }
+  const showArchived = !!archivedEl?.checked;
   const q=normalizeTextForMatch(searchEl?.value||'');
   const stageFilter=stageSel?.value||'all';
   let leads=(state.leads||[]).slice();
+  leads = showArchived ? leads.filter(l=>l.archived) : leads.filter(l=>!l.archived);
   if(stageFilter!=='all') leads=leads.filter(l=>(l.stage||'Primer Contacto')===stageFilter);
   if(q) leads=leads.filter(l=>normalizeTextForMatch(l.name).includes(q)||normalizeTextForMatch(l.phone).includes(q)||normalizeTextForMatch(l.property||'').includes(q));
   leads.sort((a,b)=>String(a.nextContact||'9999').localeCompare(String(b.nextContact||'9999')));
-  if(!leads.length){ body.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:24px;">No hay leads que coincidan.</td></tr>'; return; }
+  if(!leads.length){ body.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:24px;">${showArchived?'No hay contactos archivados.':'No hay leads que coincidan.'}</td></tr>`; return; }
   body.innerHTML=leads.map(l=>{
     const prop=findLeadProperty(l);
     const stage=l.stage||'Primer Contacto';
     return `<tr data-alllead="${escapeAttr(l.id)}">
-      <td><div class="kommo-table-name"><span class="crm-board-card-avatar" style="width:24px;height:24px;font-size:9.5px;background:${avatarColor(l.name)};">${escapeHtml(avatarInitials(l.name))}</span>${escapeHtml(l.name||'Sin nombre')}</div></td>
+      <td><div class="kommo-table-name"><span class="crm-board-card-avatar" style="width:24px;height:24px;font-size:9.5px;background:${avatarColor(l.name)};">${escapeHtml(avatarInitials(l.name))}</span>${escapeHtml(l.name||'Sin nombre')}${l.archived?' <span class="hint" style="margin:0;">📥 archivado</span>':''}</div></td>
       <td>${escapeHtml(l.phone||'—')}</td>
       <td>${escapeHtml(prop?.name||l.property||'—')}</td>
       <td><span class="crm-stage-badge ${stageInfo(stage).badgeCls}">${stageInfo(stage).icon} ${escapeHtml(stage)}</span></td>
@@ -7443,6 +7487,11 @@ async function sendWhatsAppMessage(phone, text){
       body: { to: digits, phone: digits, message: text, text, body: text }
     });
     if(error) throw error;
+    // Si el número corresponde a un lead conocido, se archiva solo al
+    // contactarlo por WhatsApp — así el tablero se va quedando solo con
+    // lo que falta contactar.
+    const contactedLead = findLeadByWaPhone(digits);
+    if(contactedLead && !contactedLead.archived) toggleLeadArchived(contactedLead, true);
     // El eco real llega por Realtime cuando la función escribe en whatsapp_messages.
     // Si en 6s no llegó (por ejemplo, la función todavía no inserta el registro),
     // dejamos el mensaje visible igual para no perder lo que se envió.
@@ -7513,6 +7562,105 @@ function parseCorreoLeadNotes(notes){
 
 let crmEmailFolderTab = 'recibidos';
 
+// Los correos de portales suelen traer, en la versión de texto plano, cada
+// link de rastreo (SendGrid, etc.) como una línea aparte llena de basura
+// como "[https://u123.ct.sendgrid.net/ls/click?upn=...]". Esta función los
+// saca, junto con líneas vacías repetidas, para dejar solo el texto real.
+function cleanEmailBodyForDisplay(text){
+  if(!text) return '';
+  const lines = text.split('\n').filter(line=>{
+    const t = line.trim();
+    if(!t) return true; // las líneas vacías se colapsan después, no se filtran acá
+    // Línea que es SOLO un link (con o sin corchetes alrededor)
+    if(/^\[?https?:\/\/\S+\]?$/.test(t)) return false;
+    return true;
+  });
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// Precarga el formulario de "+ Agregar contacto" (modo manual, para crear
+// uno NUEVO, no editar) con lo que la IA sacó de un correo. No usa
+// openLeadEditor porque ese es para editar un lead ya existente.
+function prefillNewLeadFromEmail(data){
+  resetLeadEditor();
+  document.querySelector('[data-crm-view="crm-add"]')?.click();
+  document.querySelector('[data-add-mode="manual"]')?.click();
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v||'';};
+  set('leadName', data.name);
+  set('leadPhone', data.phone);
+  set('leadChannel', 'Correo');
+  set('leadOperation', data.operation || 'Venta');
+
+  // Intentamos emparejar el texto que sacó la IA (ej. "Casa 7 Dormitorios,
+  // Coronel (FLP-...)") con una propiedad REAL de tu catálogo, para que
+  // veas el nombre y precio verdaderos antes de guardar, no el texto
+  // crudo del correo.
+  const matchedProp = findLeadPropertyInfo(data.property);
+  if(matchedProp){
+    set('leadProperty', matchedProp.name);
+    set('leadPriceLabel', matchedProp.price!=null ? formatMoney(matchedProp.price, matchedProp.priceCurrency||'CLP') : (data.priceLabel||''));
+    showToast(`Datos precargados. Se emparejó con tu propiedad: "${matchedProp.name}" ✅`);
+  } else {
+    set('leadProperty', data.property);
+    set('leadPriceLabel', data.priceLabel);
+    if(data.property) showToast('Datos precargados. No encontré esa propiedad en tu catálogo — revisa el campo "Propiedad de interés" a mano.');
+    else showToast('Datos precargados desde el correo — revisa y guarda.');
+  }
+
+  set('leadDate', todayISO());
+  set('leadNextContact', addDays(todayISO(),7));
+  set('leadNotes', data.notes || '');
+  updateLeadPhoneVisibility();
+}
+
+// Llama a analizar-lead (la misma IA que usa leer-correo) para un correo
+// puntual del Inbox, y muestra en la tarjeta si parece un contacto real.
+async function analizarCorreoInbox(uid, subject, btn){
+  btn.disabled = true; btn.textContent = '🔎 Analizando...';
+  const card = btn.closest('.crm-source-card');
+  try{
+    const detailResp = await fetch(`${SUPABASE_URL}/functions/v1/listar-correo?forceFunctionRegion=us-east-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ folder: 'inbox', uid }),
+    });
+    const detailData = await detailResp.json();
+    if(!detailResp.ok) throw new Error(detailData?.error || ('HTTP '+detailResp.status));
+    const bodyText = cleanEmailBodyForDisplay(detailData?.detail?.text || '');
+
+    const aiResp = await fetch(`${SUPABASE_URL}/functions/v1/analizar-lead`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ text: `Asunto: ${subject}\n\n${bodyText}`.slice(0,6000) }),
+    });
+    const ai = await aiResp.json();
+    if(!aiResp.ok) throw new Error(ai?.error || ('HTTP '+aiResp.status));
+
+    const hasSomething = !!(ai.name || ai.phone);
+    const confOk = ai.confidence == null || ai.confidence >= 0.5;
+    const resultBox = document.createElement('div');
+    resultBox.style.marginTop = '8px';
+    if(hasSomething && confOk){
+      resultBox.innerHTML = `<div style="color:var(--green,#4caf7d); font-size:12.5px; margin-bottom:6px;">✓ Parece un contacto real (${Math.round((ai.confidence??0.8)*100)}% de confianza)${ai.name?': '+escapeHtml(ai.name):''}${ai.phone?' · '+escapeHtml(ai.phone):''}</div>`;
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button'; addBtn.className = 'primary small';
+      addBtn.textContent = '+ Agregar como contacto';
+      addBtn.addEventListener('click', ()=> prefillNewLeadFromEmail({
+        name: ai.name, phone: ai.phone, operation: ai.operation, property: ai.property,
+        priceLabel: null, notes: `Detectado por IA desde correo.\nAsunto: ${subject}\n\n${bodyText}`.slice(0,4000),
+      }));
+      resultBox.appendChild(addBtn);
+    } else {
+      resultBox.innerHTML = `<div class="hint" style="margin:0;">✕ La IA no cree que este sea un cliente real (no encontró nombre/teléfono con suficiente confianza).</div>`;
+    }
+    btn.replaceWith(resultBox);
+  }catch(err){
+    console.error('Error analizando correo con IA:', err);
+    btn.disabled = false; btn.textContent = '🔎 Analizar con IA';
+    showToast('No se pudo analizar: '+(err && err.message ? err.message : 'error desconocido'));
+  }
+}
+
 async function openEmailViewModal(folder, uid, fallback){
   const overlay = document.getElementById('emailViewModalOverlay');
   const title = document.getElementById('emailViewModalTitle');
@@ -7523,14 +7671,19 @@ async function openEmailViewModal(folder, uid, fallback){
   overlay.classList.add('active');
   if(!supabaseClient) return;
   try{
-    const { data, error } = await supabaseClient.functions.invoke('listar-correo', { body: { folder, uid }, region: 'us-east-1' });
-    if(error) throw error;
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/listar-correo?forceFunctionRegion=us-east-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ folder, uid }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data?.error || ('HTTP '+resp.status));
     const d = data?.detail;
     if(!d){ body.textContent = 'No se pudo leer el contenido de este correo.'; return; }
     if(title) title.textContent = '✉️ ' + (d.subject || 'Correo');
     const who = folder==='sent' ? `Para: ${d.to||'—'}` : `De: ${d.fromName||d.from||'—'} <${d.from||''}>`;
     const date = d.date ? new Date(d.date).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-    body.innerHTML = `<div style="margin-bottom:10px; font-size:12.5px; color:var(--text-dim);">${escapeHtml(who)}<br>${escapeHtml(date)}</div><div>${escapeHtml(d.text||'(sin contenido)')}</div>`;
+    body.innerHTML = `<div style="margin-bottom:10px; font-size:12.5px; color:var(--text-dim);">${escapeHtml(who)}<br>${escapeHtml(date)}</div><div>${escapeHtml(cleanEmailBodyForDisplay(d.text)||'(sin contenido)')}</div>`;
   }catch(err){
     console.error('Error abriendo correo:', err);
     body.textContent = 'No se pudo cargar el contenido: '+(err && err.message ? err.message : 'revisa que listar-correo esté desplegada.');
@@ -7549,8 +7702,9 @@ function emailFolderTabsHtml(activeLabel, recibidosCount){
     {key:'sent', label:'Enviados'},
     {key:'trash', label:'Eliminados'},
   ];
-  return `<div class="kommo-inbox-tabs">
-    ${tabs.map(t=>`<button type="button" class="${crmEmailFolderTab===t.key?'active':''}" data-email-folder-tab="${t.key}">${t.label}</button>`).join('')}
+  return `<div class="kommo-inbox-tabs" style="display:flex; justify-content:space-between; align-items:center;">
+    <div>${tabs.map(t=>`<button type="button" class="${crmEmailFolderTab===t.key?'active':''}" data-email-folder-tab="${t.key}">${t.label}</button>`).join('')}</div>
+    <button type="button" class="ghost small" id="btnRefreshEmailInbox" title="Volver a consultar el correo ahora">🔄 Actualizar</button>
   </div>`;
 }
 function wireEmailFolderTabs(box){
@@ -7558,10 +7712,15 @@ function wireEmailFolderTabs(box){
     crmEmailFolderTab = btn.dataset.emailFolderTab;
     renderCRMInboxEmail();
   }));
+  box.querySelector('#btnRefreshEmailInbox')?.addEventListener('click', ()=>{
+    renderCRMInboxEmail();
+  });
 }
 
 async function renderCRMInboxEmailFolder(box, recibidosCount){
-  const label = crmEmailFolderTab==='sent' ? 'Enviados' : 'Eliminados';
+  const folderLabels = { recibidos:'Recibidos', sent:'Enviados', trash:'Eliminados' };
+  const imapFolder = crmEmailFolderTab==='recibidos' ? 'inbox' : crmEmailFolderTab;
+  const label = folderLabels[crmEmailFolderTab] || 'Recibidos';
   box.innerHTML = `${emailFolderTabsHtml(label, recibidosCount)}
     <div class="kommo-empty" style="padding:30px 20px;" id="crmEmailFolderLoading">
       <div class="ke-icon">⏳</div>
@@ -7570,11 +7729,17 @@ async function renderCRMInboxEmailFolder(box, recibidosCount){
     </div>`;
   wireEmailFolderTabs(box);
   if(!supabaseClient) return;
+  const requestedTab = crmEmailFolderTab;
   try{
-    const { data, error } = await supabaseClient.functions.invoke('listar-correo', { body: { folder: crmEmailFolderTab, limit: 25 }, region: 'us-east-1' });
-    if(error) throw error;
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/listar-correo?forceFunctionRegion=us-east-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ folder: imapFolder, limit: 30 }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data?.error || ('HTTP '+resp.status));
     // El usuario pudo haber cambiado de pestaña mientras esperábamos.
-    if(crmEmailFolderTab==='recibidos') return;
+    if(crmEmailFolderTab!==requestedTab) return;
     const messages = data?.messages || [];
     if(!messages.length){
       box.innerHTML = `${emailFolderTabsHtml(label, recibidosCount)}
@@ -7585,26 +7750,67 @@ async function renderCRMInboxEmailFolder(box, recibidosCount){
       wireEmailFolderTabs(box);
       return;
     }
+    // Para Recibidos: si un correo ya se convirtió en lead (mismo correo
+    // del remitente aparece en las notas de un lead de channel='Correo'),
+    // lo marcamos y ese clic abre la ficha en vez del visor genérico.
+    const correoLeads = requestedTab==='recibidos' ? (state.leads||[]).filter(l=>l.channel==='Correo') : [];
+    const leadByEmail = {};
+    correoLeads.forEach(l=>{ const {clientEmail}=parseCorreoLeadNotes(l.notes); if(clientEmail) leadByEmail[clientEmail.toLowerCase()]=l; });
+
     box.innerHTML = `${emailFolderTabsHtml(label, recibidosCount)}
       <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
         ${messages.map(m=>{
           const date = m.date ? new Date(m.date).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
           const who = crmEmailFolderTab==='sent' ? m.to : (m.fromName||m.from);
-          return `<div class="crm-source-card" style="text-align:left; cursor:pointer;" data-email-detail-uid="${m.uid}" data-email-detail-subject="${escapeAttr(m.subject||'')}">
+          const matchedLead = requestedTab==='recibidos' ? leadByEmail[(m.from||'').toLowerCase()] : null;
+          const leadBadge = matchedLead ? `<span style="color:var(--gold);"> · ✓ Lead: ${escapeHtml(matchedLead.name||'')}</span>` : '';
+          return `<div class="crm-source-card" style="text-align:left;" data-email-item-uid="${m.uid}">
             <div style="display:flex; justify-content:space-between; gap:8px;">
-              <div style="font-weight:700;">${escapeHtml(who||'(desconocido)')}</div>
+              <div style="font-weight:700;">${escapeHtml(who||'(desconocido)')}${leadBadge}</div>
               <div class="hint" style="margin:0;">${escapeHtml(date)}</div>
             </div>
             <div style="font-weight:600; margin-top:2px;">${escapeHtml(m.subject||'(sin asunto)')}</div>
+            <div class="ke-actions" style="margin-top:8px;">
+              <button type="button" class="ghost small" data-email-view-uid="${m.uid}" data-email-view-subject="${escapeAttr(m.subject||'')}">👁️ Ver correo</button>
+              ${matchedLead ? `<button type="button" class="ghost small" data-email-open-lead="${escapeAttr(matchedLead.id)}">👤 Ver ficha</button>` : (requestedTab==='recibidos' ? `<button type="button" class="ghost small" data-email-analyze-uid="${m.uid}" data-email-analyze-subject="${escapeAttr(m.subject||'')}">🔎 Analizar con IA</button>` : '')}
+              ${requestedTab==='recibidos' ? `<button type="button" class="ghost small" data-email-archive-uid="${m.uid}">📥 Archivar</button>` : ''}
+            </div>
           </div>`;
         }).join('')}
       </div>`;
     wireEmailFolderTabs(box);
-    box.querySelectorAll('[data-email-detail-uid]').forEach(el=>el.addEventListener('click', ()=>{
-      openEmailViewModal(crmEmailFolderTab, el.dataset.emailDetailUid, { subject: el.dataset.emailDetailSubject });
+    box.querySelectorAll('[data-email-view-uid]').forEach(btn=>btn.addEventListener('click', ()=>{
+      openEmailViewModal(imapFolder, btn.dataset.emailViewUid, { subject: btn.dataset.emailViewSubject });
+    }));
+    box.querySelectorAll('[data-email-open-lead]').forEach(btn=>btn.addEventListener('click', ()=>{
+      const lead=(state.leads||[]).find(l=>l.id===btn.dataset.emailOpenLead);
+      if(lead){ if(!lead.emailReviewed) markEmailReviewed(lead.id); openLeadEditor(lead); }
+    }));
+    box.querySelectorAll('[data-email-analyze-uid]').forEach(btn=>btn.addEventListener('click', ()=>{
+      analizarCorreoInbox(btn.dataset.emailAnalyzeUid, btn.dataset.emailAnalyzeSubject, btn);
+    }));
+    box.querySelectorAll('[data-email-archive-uid]').forEach(btn=>btn.addEventListener('click', async ()=>{
+      const uid = btn.dataset.emailArchiveUid;
+      btn.disabled = true; btn.textContent = 'Archivando...';
+      try{
+        const resp = await fetch(`${SUPABASE_URL}/functions/v1/listar-correo?forceFunctionRegion=us-east-1`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY },
+          body: JSON.stringify({ folder: imapFolder, archiveUid: uid }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data?.error || ('HTTP '+resp.status));
+        showToast('Correo archivado 📥');
+        document.querySelector(`[data-email-item-uid="${uid}"]`)?.remove();
+      }catch(err){
+        console.error('Error archivando correo:', err);
+        showToast('No se pudo archivar: '+(err && err.message ? err.message : 'error desconocido'));
+        btn.disabled = false; btn.textContent = '📥 Archivar';
+      }
     }));
   }catch(err){
     console.error('Error listando correo ('+crmEmailFolderTab+'):', err);
+    if(crmEmailFolderTab!==requestedTab) return;
     box.innerHTML = `${emailFolderTabsHtml(label, recibidosCount)}
       <div class="kommo-empty" style="padding:30px 20px;">
         <div class="ke-icon">⚠️</div>
@@ -7618,12 +7824,7 @@ async function renderCRMInboxEmailFolder(box, recibidosCount){
 function renderCRMInboxEmail(){
   const box = document.getElementById('crmInboxEmailBody');
   if(!box) return;
-  const correoLeads = (state.leads||[]).filter(l=>l.channel==='Correo').sort((a,b)=> new Date(b.firstContact||0)-new Date(a.firstContact||0));
-
-  if(crmEmailFolderTab!=='recibidos'){
-    renderCRMInboxEmailFolder(box, correoLeads.length);
-    return;
-  }
+  const correoLeads = (state.leads||[]).filter(l=>l.channel==='Correo');
 
   if(!isEmailConnected() && !correoLeads.length){
     box.innerHTML = `${emailFolderTabsHtml('Recibidos', 0)}
@@ -7638,38 +7839,10 @@ function renderCRMInboxEmail(){
     return;
   }
 
-  if(!correoLeads.length){
-    box.innerHTML = `${emailFolderTabsHtml('Recibidos', 0)}
-      <div class="kommo-empty" style="padding:30px 20px;">
-        <div class="ke-icon">✉️</div>
-        <h4>Aún no ha llegado ningún correo filtrado</h4>
-        <p>En cuanto leer-correo procese un correo de un remitente permitido, va a aparecer aquí.</p>
-      </div>`;
-    wireEmailFolderTabs(box);
-    return;
-  }
-
-  box.innerHTML = `${emailFolderTabsHtml('Recibidos', correoLeads.length)}
-    <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
-      ${correoLeads.map(l=>{
-        const {subject, clientEmail, preview} = parseCorreoLeadNotes(l.notes);
-        const date = l.firstContact ? new Date(l.firstContact).toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
-        return `<div class="crm-source-card" style="text-align:left; cursor:pointer;" data-email-inbox-item="${escapeAttr(l.id)}">
-          <div style="display:flex; justify-content:space-between; gap:8px;">
-            <div style="font-weight:700;">${escapeHtml(l.name||'Contacto sin nombre')} ${!l.emailReviewed?'<span style="color:var(--gold);">● nuevo</span>':''}</div>
-            <div class="hint" style="margin:0;">${escapeHtml(date)}</div>
-          </div>
-          <div style="font-weight:600; margin-top:2px;">${escapeHtml(subject)}</div>
-          <div class="hint" style="margin:2px 0;">${clientEmail?escapeHtml(clientEmail)+' · ':''}${escapeHtml(l.property||'')}${l.priceLabel?' · 💰 '+escapeHtml(l.priceLabel):''}</div>
-          <div class="hint" style="margin:0;">${escapeHtml(preview)}</div>
-        </div>`;
-      }).join('')}
-    </div>`;
-  wireEmailFolderTabs(box);
-  box.querySelectorAll('[data-email-inbox-item]').forEach(el=>el.addEventListener('click', ()=>{
-    const lead=(state.leads||[]).find(l=>l.id===el.dataset.emailInboxItem);
-    if(lead){ if(!lead.emailReviewed) markEmailReviewed(lead.id); openLeadEditor(lead); }
-  }));
+  // Los tres tabs ahora leen el correo real por IMAP (igual que
+  // Enviados/Eliminados). "Recibidos" además marca cuáles ya se
+  // convirtieron en lead, para saltar directo a la ficha en esos casos.
+  renderCRMInboxEmailFolder(box, correoLeads.length);
 }
 
 /* =====================================================================
