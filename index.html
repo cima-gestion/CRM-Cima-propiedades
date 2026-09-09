@@ -3,9 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c9a15a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2314171a'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='%23c9a15a'>🏢</text></svg>">
+
 <title>CRM Cima — Seguimiento de Clientes</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js"></script>
 <!-- Librería Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -930,6 +937,200 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
   .kommo-integration-card .ic-status.ok{ background:var(--green-bg); color:var(--green); }
   .kommo-integration-card .ic-status.locked{ background:var(--grey-bg); color:var(--text-dim); }
 
+
+  /* Wrapper seguro para evitar bypass de autenticación por consola */
+  #cimaAppWrapper { display: none; width: 100%; min-height: 100vh; }
+
+  /* Motor de Cruce Inteligente (Matching) */
+  .match-widget-box {
+    background: rgba(201, 161, 90, 0.08);
+    border: 1px solid rgba(201, 161, 90, 0.35);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 12px 0;
+  }
+  .match-widget-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .match-row-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg-panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    flex-wrap: wrap;
+  }
+  .match-score-badge {
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 12px;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid rgba(76, 175, 125, 0.3);
+  }
+
+  /* Lead Scoring & Termómetro (Kommo / HubSpot) */
+  .lead-score-pill {
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .lead-score-hot { background: var(--red-bg); color: var(--red); border: 1px solid rgba(217,97,79,.3); }
+  .lead-score-warm { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(217,164,65,.3); }
+  .lead-score-cold { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(90,155,217,.3); }
+
+  /* Hub de WhatsApp API (Kommo Style) */
+  .wa-hub-box {
+    background: var(--bg-panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .wa-hub-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .wa-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .wa-status-pill.connected { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); }
+  .wa-status-pill.disconnected { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+
+  /* Ficha Web Rápida (Tokko / Wasi) */
+  .web-sheet-wrap {
+    background: var(--bg-panel);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .web-sheet-hero {
+    border-radius: 10px;
+    overflow: hidden;
+    height: 240px;
+    background: var(--bg-panel-3);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .web-sheet-hero img { width: 100%; height: 100%; object-fit: cover; }
+  .web-sheet-specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .web-sheet-spec {
+    background: var(--bg-panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+  }
+
+  /* Impresión limpia para Orden de Visita Oficial */
+  @media print {
+    body * { visibility: hidden !important; }
+    #printableVisitOrder, #printableVisitOrder * { visibility: visible !important; }
+    #printableVisitOrder {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      background: #fff !important;
+      color: #000 !important;
+      padding: 40px !important;
+    }
+  }
+
+
+  /* Semáforo de Velocidad de Respuesta SLA (Roadmap 2026) */
+  .sla-badge {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+  }
+  .sla-green {
+    background: rgba(76, 175, 125, 0.2);
+    color: #4caf7d;
+    border: 1px solid rgba(76, 175, 125, 0.4);
+    animation: slaPulse 2s infinite ease-in-out;
+  }
+  .sla-yellow {
+    background: rgba(217, 164, 65, 0.2);
+    color: #d9a441;
+    border: 1px solid rgba(217, 164, 65, 0.4);
+  }
+  .sla-red {
+    background: rgba(217, 97, 79, 0.22);
+    color: #e88;
+    border: 1px solid rgba(217, 97, 79, 0.5);
+    font-weight: 900;
+  }
+  .sla-done {
+    background: rgba(154, 161, 168, 0.15);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  @keyframes slaPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+  }
+
+  /* Ranking SLA de Captadoras */
+  .sla-ranking-card {
+    background: var(--bg-panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .sla-speed-tag {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .sla-speed-fast { background: var(--green-bg); color: var(--green); }
+  .sla-speed-slow { background: var(--red-bg); color: var(--red); }
+
 </style>
 </head>
 <body>
@@ -953,6 +1154,7 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
 </div>
 
 
+<div id="cimaAppWrapper">
 <aside class="sidebar" id="appSidebar">
   <div class="sidebar-top">
     <div class="sidebar-brand-row">
@@ -1029,6 +1231,9 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
         <button type="button" class="side-nav-item app-view-btn" data-app-view="panel-plantillas">Plantillas</button>
         <button type="button" class="side-nav-item app-view-btn" data-app-view="crm-broadcasts">Difusiones</button>
         <button type="button" class="side-nav-item app-view-btn" data-app-view="panel-fotos">Marca de agua en fotos</button>
+        <button type="button" class="side-nav-item app-view-btn" id="btnSideXmlFeed">Feed XML Portales</button>
+        <button type="button" class="side-nav-item app-view-btn" id="btnSideWhatsAppHub">Conexión WhatsApp API</button>
+        <button type="button" class="side-nav-item app-view-btn" data-app-view="crm-automations">Secuencias Drip (Leads Fríos)</button>
       </div>
     </div>
 
@@ -1103,6 +1308,7 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
   <button type="button" class="crm-view-btn" data-crm-view="crm-settings"></button>
   <button type="button" class="crm-view-btn" data-crm-view="crm-notifications"></button>
   <button type="button" class="crm-view-btn" data-crm-view="crm-help"></button>
+  <button type="button" class="crm-view-btn" data-crm-view="crm-automations"></button>
 
   <button type="button" class="tab-btn active" data-tab="seguimiento"></button>
   <button type="button" class="tab-btn" data-tab="publicaciones"></button>
@@ -1144,7 +1350,10 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
           <h3 style="margin:0; display:inline-block; font-size:14px;">📅 Progreso de Republicaciones (Ciclo Semanal — 7 días)</h3>
           <span class="hint" id="dailyProgressDate" style="margin-left:8px;"></span>
         </div>
-        <div id="dailyProgressKpi" style="font-size:15px; font-weight:700; color:var(--gold); font-family:var(--font-display);">0 / 0 (0%)</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="primary small" id="btnPubXmlFeed">📤 Feed XML Portales</button>
+          <div id="dailyProgressKpi" style="font-size:15px; font-weight:700; color:var(--gold); font-family:var(--font-display);">0 / 0 (0%)</div>
+        </div>
       </div>
       <div style="height:12px; background:var(--bg-panel-3); border-radius:6px; overflow:hidden; border:1px solid var(--border);">
         <div id="dailyProgressFill" style="height:100%; width:0%; background:var(--gold); transition:width .3s ease;"></div>
@@ -1387,6 +1596,16 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
           <div class="row">
             <div class="field" style="flex:1 1 100%;"><label>Etiquetas</label><input type="text" id="leadTags" placeholder="Ej: VIP, Urgente, Comercio Mayorista (separadas por coma)"></div>
           </div>
+          
+          <!-- MOTOR DE CRUCE INTELIGENTE (MATCHING) -->
+          <div id="leadMatchingWidget" class="match-widget-box" style="display:none;">
+            <div class="match-widget-title">
+              <span>🎯 Propiedades Coincidentes (Smart Matching)</span>
+              <span class="hint" id="leadMatchingCount" style="margin:0;">0 encontradas</span>
+            </div>
+            <div id="leadMatchingResults"></div>
+          </div>
+
           <div class="row"><div class="field" style="flex:1 1 100%;"><label>Notas</label><textarea id="leadNotes" rows="2" placeholder="Ej: busca 2 dormitorios, presupuesto hasta $450.000"></textarea></div></div>
           <div class="row">
             <div class="field" style="flex:1 1 100%;">
@@ -1402,7 +1621,7 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
               </div>
             </div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="primary" id="btnAddLead">+ Registrar contacto</button><button class="ghost small" id="btnCancelLeadEdit" type="button" style="display:none;">Cancelar edición</button></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="primary" id="btnAddLead">+ Registrar contacto</button><button type="button" class="ghost small" id="btnScheduleVisitDirect">📅 Agendar visita</button><button class="ghost small" id="btnCancelLeadEdit" type="button" style="display:none;">Cancelar edición</button></div>
         </div>
 
         <div id="crmImportAdd" style="display:none;">
@@ -1710,9 +1929,14 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
 
       <div class="card">
         <div class="crm-page-head"><div><h3>📣 Sincroniza con plataformas publicitarias</h3><div class="hint">Envía tus segmentos a Meta Ads o Google Ads y mantenlos actualizados en tiempo real.</div></div></div>
-        <div class="kommo-soon" style="padding:26px 20px;">
-          <span class="ks-badge">Próximamente</span>
-          <p style="margin:0;">Se habilitará cuando conectes una cuenta publicitaria en Ajustes → Centro de integraciones.</p>
+        <div style="background:var(--bg-panel-2); border:1px solid var(--border); border-radius:10px; padding:14px; margin-top:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <strong style="color:var(--text); font-size:13.5px;">Público Listo: Compradores Activos Cima (Meta Ads / Google Ads)</strong>
+              <div class="hint" style="margin:2px 0 0;">Genera archivo CSV de clientes con formato compatible con Meta Business Suite y Google Customer Match.</div>
+            </div>
+            <button type="button" class="primary small" onclick="exportAdsCustomAudienceCsv()">⬇️ Descargar CSV para Meta Ads</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1720,24 +1944,49 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
     <!-- ===== Listas ===== -->
     <div class="crm-view" id="crm-companies">
       <div class="card">
-        <div class="crm-page-head"><div><h3>🏢 Compañías</h3><div class="hint">Inmobiliarias, corredoras o empresas asociadas a tus contactos.</div></div></div>
-        <div class="kommo-soon">
-          <span class="ks-badge">Próximamente</span>
-          <div class="ks-icon">🏢</div>
-          <h4>Aún no hay compañías registradas</h4>
-          <p>Por ahora el CRM está orientado a personas naturales. Cuando gestiones clientes corporativos, aquí podrás agruparlos por empresa.</p>
+        <div class="crm-page-head">
+          <div>
+            <h3>🏢 Directorio de Compañías & Alianzas Inmobiliarias</h3>
+            <div class="hint">Inmobiliarias, constructoras, bancos y corredoras aliadas para canje.</div>
+          </div>
+          <button type="button" class="primary small" id="btnOpenAddCompanyModal">+ Registrar Compañía</button>
         </div>
+
+        <div class="crm-toolbar" style="margin-top:14px;">
+          <input type="search" id="searchCompanies" placeholder="🔎 Buscar por nombre de empresa, RUT o contacto...">
+        </div>
+
+        <div id="companiesListContainer" style="margin-top:12px; display:grid; gap:10px;"></div>
       </div>
     </div>
 
     <div class="crm-view" id="crm-ai-agent">
       <div class="card">
-        <div class="crm-page-head"><div><h3>✨ Agente de IA</h3><div class="hint">Asistente automático para responder y calificar leads.</div></div></div>
-        <div class="kommo-soon">
-          <span class="ks-badge">Próximamente</span>
-          <div class="ks-icon">✨</div>
-          <h4>Agente de IA para tu inmobiliaria</h4>
-          <p>Cuando se conecten WhatsApp y correo, un agente de IA podrá responder primeras consultas, calificar leads y agendar visitas automáticamente.</p>
+        <div class="crm-page-head">
+          <div>
+            <h3>✨ Asistente de IA Inmobiliario 24/7 (Cima Brain)</h3>
+            <div class="hint">Pregúntale a la IA sobre tu cartera, redacta mensajes o analiza oportunidades de clientes.</div>
+          </div>
+        </div>
+
+        <!-- Chips de Preguntas Rápidas -->
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
+          <button type="button" class="ghost small" onclick="askAiPrompt('¿Qué propiedades activas tenemos bajo $500.000 o UF 3.000?')">🔍 Propiedades bajo presupuesto</button>
+          <button type="button" class="ghost small" onclick="askAiPrompt('¿Cuáles son los 3 clientes con mayor urgencia hoy?')">🔥 Clientes prioritarios hoy</button>
+          <button type="button" class="ghost small" onclick="askAiPrompt('Redáctame un correo formal solicitando pre-aprobación bancaria')">📝 Pedir crédito bancario</button>
+          <button type="button" class="ghost small" onclick="askAiPrompt('¿Cómo va la tasa de cierre y qué captadora lidera este mes?')">📊 Resumen de desempeño</button>
+        </div>
+
+        <div id="aiChatThread" style="height:340px; overflow-y:auto; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px;">
+          <div class="wa-bubble in">
+            <span class="wa-sender">✨ Cima AI</span>
+            ¡Hola! Soy tu asistente de inteligencia artificial para Cima Propiedades. Puedo ayudarte a buscar propiedades, redactar respuestas o analizar métricas de clientes. ¿En qué te ayudo?
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="aiUserInput" placeholder="Pregúntale a la IA algo sobre tu cartera o tus clientes..." style="flex:1;">
+          <button type="button" class="primary" id="btnSendAiQuery">Enviar</button>
         </div>
       </div>
     </div>
@@ -1745,24 +1994,116 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
     <!-- ===== Automatizaciones ===== -->
     <div class="crm-view" id="crm-bots">
       <div class="card">
-        <div class="crm-page-head"><div><h3>🤖 Bots</h3><div class="hint">Construye bots sin código para automatizar chats y tareas.</div></div></div>
-        <div class="kommo-empty">
-          <div class="ke-icon">🤖</div>
-          <h4>No tienes bots creados todavía</h4>
-          <p>Cuando conectes un canal de mensajería, podrás crear bots de bienvenida y de calificación de leads.</p>
-          <div class="ke-actions"><button type="button" class="ghost small kommo-soon-btn">+ Crear bot</button></div>
+        <div class="crm-page-head">
+          <div>
+            <h3>🤖 Gestor & Constructor de Bots de Atención (Salesbots 24/7)</h3>
+            <div class="hint">Automatiza la atención y cualificación de clientes potenciales antes de pasarlos a una captadora.</div>
+          </div>
+          <button type="button" class="primary small" id="btnCreateCustomBot">+ Crear Bot Nuevo</button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-top:14px;">
+          <!-- Bot 1: Bienvenida & Cualificación -->
+          <div class="crm-source-card" style="text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <div style="font-size:24px;">👋</div>
+                <strong style="font-size:14px;">Bot de Bienvenida & Cualificación</strong>
+                <div class="hint" style="margin:2px 0 8px;">Pregunta si busca comprar o arrendar, presupuesto y comuna.</div>
+              </div>
+              <input type="checkbox" id="botActive1" checked style="accent-color:var(--gold); width:18px; height:18px;">
+            </div>
+            <div style="font-size:11.5px; background:var(--bg-panel-3); padding:8px; border-radius:6px; margin:8px 0;">
+              <strong>Paso 1:</strong> Saludo de bienvenida.<br>
+              <strong>Paso 2:</strong> ¿Buscas para comprar o arrendar?<br>
+              <strong>Paso 3:</strong> ¿En qué comuna y rango de presupuesto?
+            </div>
+            <button type="button" class="ghost small" style="width:100%;" onclick="openBotSimulator('Bienvenida')">🧪 Probar en Simulador</button>
+          </div>
+
+          <!-- Bot 2: Calificador de Crédito Hipotecario -->
+          <div class="crm-source-card" style="text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <div style="font-size:24px;">🏦</div>
+                <strong style="font-size:14px;">Bot Calificador de Crédito Hipotecario</strong>
+                <div class="hint" style="margin:2px 0 8px;">Filtra compradores con pre-aprobación bancaria o pie disponible.</div>
+              </div>
+              <input type="checkbox" id="botActive2" checked style="accent-color:var(--gold); width:18px; height:18px;">
+            </div>
+            <div style="font-size:11.5px; background:var(--bg-panel-3); padding:8px; border-radius:6px; margin:8px 0;">
+              <strong>Paso 1:</strong> ¿Cuentas con pre-aprobación bancaria?<br>
+              <strong>Paso 2:</strong> ¿Qué porcentaje de pie tienes ahorrado?<br>
+              <strong>Paso 3:</strong> Si califica ➜ Mueve a "Envío documentos".
+            </div>
+            <button type="button" class="ghost small" style="width:100%;" onclick="openBotSimulator('Credito')">🧪 Probar en Simulador</button>
+          </div>
+
+          <!-- Bot 3: Agendador Automático de Visitas -->
+          <div class="crm-source-card" style="text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <div style="font-size:24px;">📅</div>
+                <strong style="font-size:14px;">Bot Agendador de Visitas</strong>
+                <div class="hint" style="margin:2px 0 8px;">Coordina días y horarios de visitas en terreno.</div>
+              </div>
+              <input type="checkbox" id="botActive3" checked style="accent-color:var(--gold); width:18px; height:18px;">
+            </div>
+            <div style="font-size:11.5px; background:var(--bg-panel-3); padding:8px; border-radius:6px; margin:8px 0;">
+              <strong>Paso 1:</strong> Ofrece disponibilidad (Jueves 16h / Sábado 11h).<br>
+              <strong>Paso 2:</strong> Solicita confirmación y RUT del visitante.<br>
+              <strong>Paso 3:</strong> Dispara aviso al WhatsApp de la captadora.
+            </div>
+            <button type="button" class="ghost small" style="width:100%;" onclick="openBotSimulator('Visitas')">🧪 Probar en Simulador</button>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="crm-view" id="crm-broadcasts">
       <div class="card">
-        <div class="crm-page-head"><div><h3>📣 Difusiones</h3><div class="hint">Envía un mismo mensaje a un grupo de contactos filtrados.</div></div></div>
-        <div class="kommo-soon">
-          <span class="ks-badge">Próximamente</span>
-          <div class="ks-icon">📣</div>
-          <h4>Difusiones masivas</h4>
-          <p>Se habilitará junto con la conexión de WhatsApp. Mientras tanto, usa las Plantillas para enviar mensajes rápidos uno a uno.</p>
+        <div class="crm-page-head">
+          <div>
+            <h3>📣 Difusiones Masivas & Campañas por Segmento</h3>
+            <div class="hint">Envía mensajes dirigidos a grupos de contactos según etapa, propiedad o segmento.</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px;">
+          <div class="field" style="flex:1 1 200px;">
+            <label>Público Destinatario (Segmento)</label>
+            <select id="bcastTargetFilter">
+              <option value="all_active">Todos los leads activos</option>
+              <option value="stage_seguimiento">En etapa: Seguimiento</option>
+              <option value="stage_primer_contacto">En etapa: Primer Contacto</option>
+              <option value="tag_vip">Etiqueta: VIP / Inversionistas</option>
+              <option value="channel_whatsapp">Canal: WhatsApp</option>
+            </select>
+          </div>
+          <div class="field" style="flex:0 0 160px;">
+            <label>Destinatarios Calificados</label>
+            <div id="bcastRecipientCount" style="padding:10px; font-weight:800; color:var(--gold); font-size:16px;">0 contactos</div>
+          </div>
+        </div>
+
+        <div class="field" style="margin:10px 0;">
+          <label>Mensaje de la Campaña (Admite variables {{nombre}}, {{propiedad}}, {{precio}})</label>
+          <textarea id="bcastMessageText" rows="4" placeholder="Hola {{nombre}}, tenemos novedades exclusivas sobre propiedades en cartera..."></textarea>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="primary" id="btnLaunchBroadcast">🚀 Lanzar Difusión masiva</button>
+          <button type="button" class="ghost" id="btnPreviewBroadcastRecipients">👁️ Ver Destinatarios</button>
+        </div>
+
+        <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:14px;">
+          <h4 style="margin:0 0 10px; font-size:13.5px;">Historial de Campañas Enviadas</h4>
+          <div id="bcastHistoryList">
+            <div class="log-item">
+              <span class="log-text">📣 Campaña Oportunidades San Pedro · 14 contactos</span>
+              <span class="log-date">Completada · 100% entregado</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1770,37 +2111,52 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
     <!-- ===== Insights ===== -->
     <div class="crm-view" id="crm-roi">
       <div class="card">
-        <div class="crm-page-head"><div><h3>💰 ROI</h3><div class="hint">Retorno sobre la inversión en portales y publicidad.</div></div></div>
-        <div class="kommo-soon">
-          <span class="ks-badge">Próximamente</span>
-          <div class="ks-icon">💰</div>
-          <h4>Cálculo de ROI por fuente</h4>
-          <p>Cuando registres el costo de cada portal/campaña, aquí verás el retorno comparado con las ventas cerradas de "Panel de control".</p>
+        <div class="crm-page-head">
+          <div>
+            <h3>💰 Retorno de Inversión (ROI) y Costo por Lead por Portal</h3>
+            <div class="hint">Compara cuánto inviertes en TocToc, Yapo, Portal Inmobiliario o Meta Ads vs. los honorarios generados.</div>
+          </div>
+        </div>
+
+        <div class="stat-grid" id="roiOverviewGrid" style="margin-bottom:16px;"></div>
+
+        <h4 style="margin:0 0 10px; font-size:14px;">Inversión Mensual por Canal vs. Ventas Cerradas</h4>
+        <div style="overflow-x:auto;">
+          <table class="kommo-table" id="roiPortalTable">
+            <thead>
+              <tr><th>Portal / Canal</th><th>Inversión Mensual ($)</th><th>Leads Generados</th><th>Costo por Lead (CPL)</th><th>Ventas Cerradas</th><th>Honorarios Ganados</th><th>ROI (%)</th></tr>
+            </thead>
+            <tbody id="roiPortalTableBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
 
     <div class="crm-view" id="crm-pnl">
       <div class="card">
-        <div class="crm-page-head"><div><h3>📊 Ganancias y pérdidas</h3><div class="hint">Resultado económico del período.</div></div></div>
-        <div class="kommo-soon">
-          <span class="ks-badge">Próximamente</span>
-          <div class="ks-icon">📊</div>
-          <h4>Estado de resultados</h4>
-          <p>Para verlo aquí necesitas registrar comisiones y costos por venta. Mientras tanto, revisa "Panel de control" para las ventas cerradas.</p>
-        </div>
+        <div class="crm-page-head"><div><h3>💰 Comisiones & Estado de Resultados</h3><div class="hint">Cálculo de honorarios cobrados, división con captadoras y pipeline proyectado.</div></div></div>
+        <div class="crm-kpi-grid" id="pnlKpiGrid"></div>
+      </div>
+      <div class="card">
+        <div class="crm-page-head"><div><h3>👥 Liquidación de Comisiones por Captadora</h3></div><button type="button" class="primary small" id="btnOpenCommissionSettlement">📄 Generar Liquidación Formal</button></div>
+        <div id="pnlAgentsTable" style="overflow-x:auto;"></div>
       </div>
     </div>
 
     <div class="crm-view" id="crm-calls-report">
       <div class="card">
-        <div class="crm-page-head"><div><h3>📞 Reporte de llamadas</h3><div class="hint">Duración y resultado de llamadas por captadora.</div></div></div>
-        <div class="kommo-soon">
-          <span class="ks-badge">Próximamente</span>
-          <div class="ks-icon">📞</div>
-          <h4>Aún no hay integración telefónica</h4>
-          <p>Se habilitará cuando se conecte un proveedor de telefonía (VoIP). Por ahora, registra cada llamada como nota en el contacto.</p>
+        <div class="crm-page-head">
+          <div>
+            <h3>📞 Reporte de Llamadas & Productividad Telefónica</h3>
+            <div class="hint">Registro y seguimiento de llamadas realizadas por las asesoras del equipo.</div>
+          </div>
+          <button type="button" class="primary small" id="btnLogCallModalOpen">+ Registrar Llamada</button>
         </div>
+
+        <div class="stat-grid" id="callsStatsGrid" style="margin-top:14px; margin-bottom:16px;"></div>
+
+        <h4 style="margin:0 0 10px; font-size:13.5px;">Registro de Llamadas Recientes</h4>
+        <div id="callsLogTable"></div>
       </div>
     </div>
 
@@ -1998,12 +2354,13 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
       <button class="ghost small" id="btnDossierReload" title="Reiniciar el Dossier Studio (borra lo cargado en esta sesión)">🔄 Reiniciar herramienta</button>
     </div>
     <div class="card" style="padding:0; overflow:hidden;">
-      <iframe id="dossierFrame" title="Dossier Studio" style="width:100%; height:82vh; min-height:640px; border:0; display:block; background:#faf8f5;"></iframe>
+      <iframe id="dossierFrame" title="Dossier Studio" sandbox="allow-scripts allow-downloads allow-same-origin allow-modals" style="width:100%; height:82vh; min-height:640px; border:0; display:block; background:#faf8f5;"></iframe>
     </div>
   </section>
 
 </main>
 </div>
+</div><!-- FIN cimaAppWrapper -->
 
 <!-- BARRA FLOTANTE DE ACCIONES MASIVAS -->
 <div id="bulkActionsBar" class="bulk-bar" style="display:none;">
@@ -2087,6 +2444,296 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
   </div>
 </div>
 
+
+<!-- MODAL: AGENDAR VISITA AL INMUEBLE -->
+<div class="cima-modal-overlay" id="scheduleVisitModalOverlay">
+  <div class="cima-modal">
+    <div class="cima-modal-head">
+      <h3>📅 Agendar Visita a Inmueble</h3>
+      <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+    </div>
+    <div class="cima-modal-body">
+      <div class="row">
+        <div class="field"><label>Fecha de Visita</label><input type="date" id="visDate"></div>
+        <div class="field"><label>Hora de Visita</label><input type="time" id="visTime" value="15:30"></div>
+      </div>
+      <div class="field" style="margin-bottom:10px;"><label>Propiedad a Visitar</label><input type="text" id="visProperty" readonly></div>
+      <div class="field" style="margin-bottom:10px;"><label>Cliente Visitante</label><input type="text" id="visClient" readonly></div>
+      <div class="field" style="margin-bottom:14px;"><label>Punto de Encuentro / Dirección</label><input type="text" id="visAddress"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="primary small" id="btnVisitGoogleCal">📅 Añadir a Google Calendar</button>
+        <button type="button" class="ghost small" id="btnVisitIcs">⬇️ Descargar archivo .ICS</button>
+        <button type="button" class="ghost small" id="btnVisitOrderOpen">📄 Generar Orden de Visita</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ORDEN DE VISITA INMOBILIARIA OFICIAL (IMPRIMIBLE) -->
+<div class="cima-modal-overlay" id="visitOrderModalOverlay">
+  <div class="cima-modal" style="max-width:760px;">
+    <div class="cima-modal-head">
+      <h3>📄 Orden de Visita Inmobiliaria Oficial</h3>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="primary small" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+      </div>
+    </div>
+    <div class="cima-modal-body" id="printableVisitOrder" style="background:#fff; color:#111; padding:30px; border-radius:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #c9a15a; padding-bottom:14px; margin-bottom:18px;">
+        <div>
+          <h2 style="margin:0; font-family:Georgia,serif; font-size:22px; color:#17533d;">CIMA PROPIEDADES</h2>
+          <div style="font-size:11px; color:#666;">Gestión Inmobiliaria Integral · Concepción / Santiago</div>
+        </div>
+        <div style="text-align:right; font-size:12px;">
+          <strong>ORDEN DE VISITA Nº <span id="voNumber">1001</span></strong><br>
+          <span id="voDate"></span>
+        </div>
+      </div>
+      <p style="font-size:12px; line-height:1.5;">Por medio del presente instrumento, se deja constancia de la visita realizada a la propiedad individualizada a continuación, a través de la gestión profesional de <strong>Cima Propiedades</strong>:</p>
+      <table style="width:100%; font-size:12.5px; margin:14px 0; border-collapse:collapse;">
+        <tr><td style="padding:6px; background:#f5f5f5; font-weight:700; width:30%;">Inmueble:</td><td style="padding:6px;" id="voPropName"></td></tr>
+        <tr><td style="padding:6px; background:#f5f5f5; font-weight:700;">Dirección:</td><td style="padding:6px;" id="voPropAddress"></td></tr>
+        <tr><td style="padding:6px; background:#f5f5f5; font-weight:700;">Cliente Visitante:</td><td style="padding:6px;" id="voClientName"></td></tr>
+        <tr><td style="padding:6px; background:#f5f5f5; font-weight:700;">Teléfono:</td><td style="padding:6px;" id="voClientPhone"></td></tr>
+      </table>
+      <div style="font-size:11px; color:#555; line-height:1.4; margin:16px 0; border:1px solid #ddd; padding:10px; border-radius:4px;">
+        <strong>Cláusula de Reconocimiento y Honorarios:</strong> El visitante declara haber tomado conocimiento de la propiedad a través de Cima Propiedades. En caso de celebrar compraventa o arrendamiento del inmueble de forma directa o indirecta, se obliga al pago de los honorarios de corretaje (2% + IVA en compraventa / 50% de canon en arriendo).
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:45px; text-align:center;">
+        <div style="border-top:1px solid #333; width:45%; padding-top:6px; font-size:11.5px;">Firma Cliente Visitante<br>RUT: ____________________</div>
+        <div style="border-top:1px solid #333; width:45%; padding-top:6px; font-size:11.5px;">Cima Propiedades<br>Agente Responsable</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: FEED XML PORTALES INMOBILIARIOS -->
+<div class="cima-modal-overlay" id="xmlFeedModalOverlay">
+  <div class="cima-modal" style="max-width:760px;">
+    <div class="cima-modal-head">
+      <h3>📤 Feed XML para Portales (TocToc, Yapo, Portal Inmobiliario)</h3>
+      <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+    </div>
+    <div class="cima-modal-body">
+      <div class="hint" style="margin-bottom:10px;">XML estructurado conforme a los estándares de sindicación inmobiliaria en Chile.</div>
+      <textarea id="xmlFeedContentArea" rows="14" readonly style="font-family:monospace; font-size:11.5px;"></textarea>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" class="primary small" id="btnDownloadXmlFile">💾 Descargar Archivo XML</button>
+        <button type="button" class="ghost small" id="btnCopyXmlContent">📋 Copiar al Portapapeles</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CENTRO DE CONEXIÓN WHATSAPP BUSINESS API (KOMMO STYLE) -->
+<div class="cima-modal-overlay" id="whatsAppHubModalOverlay">
+  <div class="cima-modal" style="max-width:680px;">
+    <div class="cima-modal-head">
+      <h3>📱 Centro de Conexión WhatsApp Business API (Estilo Kommo)</h3>
+      <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+    </div>
+    <div class="cima-modal-body">
+      <div class="wa-hub-box">
+        <div class="wa-hub-head">
+          <div>
+            <strong style="font-size:14px;">Estado del Canal WhatsApp</strong>
+            <div class="hint" style="margin:2px 0 0;">Canal bidireccional para recepción y envío oficial de mensajes.</div>
+          </div>
+          <span class="wa-status-pill disconnected" id="waHubStatusBadge">● Desconectado</span>
+        </div>
+        <div class="row">
+          <div class="field"><label>Proveedor / Conexión</label>
+            <select id="waHubProvider">
+              <option value="meta_cloud">Meta WhatsApp Cloud API Oficial (Directo)</option>
+              <option value="ycloud">YCloud / BSP Oficial</option>
+              <option value="custom">Webhook Personalizado</option>
+            </select>
+          </div>
+          <div class="field"><label>Número de WhatsApp Activo</label>
+            <input type="text" id="waHubPhoneNumber" placeholder="+56 9 5813 6200">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Phone Number ID (Meta / YCloud)</label>
+            <input type="text" id="waHubPhoneId" placeholder="Ej: 104857291847291">
+          </div>
+          <div class="field"><label>WABA ID (WhatsApp Business Account)</label>
+            <input type="text" id="waHubWabaId" placeholder="Ej: 928374615283940">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:10px;">
+          <label>Permanent Access Token (Meta System User Token)</label>
+          <input type="text" id="waHubAccessToken" placeholder="EAAxxxxxxx...">
+        </div>
+        <div class="field" style="margin-bottom:10px;">
+          <label>Webhook URL (Endpoint en tu Supabase Edge Function)</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="waHubWebhookUrl" readonly value="https://rbpsdtsprnbzsloudbsz.supabase.co/functions/v1/whatsapp-webhook" style="font-family:monospace; font-size:12px;">
+            <button type="button" class="ghost small" onclick="navigator.clipboard.writeText(document.getElementById('waHubWebhookUrl').value).then(()=>showToast('URL copiada ✅'))">📋</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Webhook Verify Token</label>
+            <input type="text" id="waHubVerifyToken" value="cima_whatsapp_secret_2026">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="primary small" id="btnSaveWhatsAppHub">💾 Guardar Configuración</button>
+            <button type="button" class="ghost small" id="btnToggleWhatsAppHubConn">Conectar Canal</button>
+          </div>
+          <button type="button" class="ghost small" id="btnTestWhatsAppMessage">🧪 Probar Envío</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: FICHA WEB COMPARTIBLE (TOKKO / WASI STYLE) -->
+<div class="cima-modal-overlay" id="webSheetModalOverlay">
+  <div class="cima-modal" style="max-width:680px;">
+    <div class="cima-modal-head">
+      <h3>🌐 Ficha Web Compartible para Clientes</h3>
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="primary small" id="btnCopyWebSheetLink">📋 Copiar Resumen WhatsApp</button>
+        <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+      </div>
+    </div>
+    <div class="cima-modal-body" id="webSheetBodyMount"></div>
+  </div>
+</div>
+
+
+<!-- MODAL: LIQUIDACIÓN FORMAL DE COMISIONES (INFORME PABLO) -->
+<div class="cima-modal-overlay" id="commissionSettlementModalOverlay">
+  <div class="cima-modal" style="max-width:800px;">
+    <div class="cima-modal-head">
+      <h3>📄 Informe de Liquidación de Honorarios & Comisiones</h3>
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="primary small" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+        <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+      </div>
+    </div>
+    <div class="cima-modal-body" id="printableCommissionSettlement" style="background:#fff; color:#111; padding:30px; border-radius:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #c9a15a; padding-bottom:14px; margin-bottom:18px;">
+        <div>
+          <h2 style="margin:0; font-family:Georgia,serif; font-size:22px; color:#17533d;">CIMA PROPIEDADES</h2>
+          <div style="font-size:11px; color:#666;">Cierre Mensual de Honorarios y Comisiones de Corretaje</div>
+        </div>
+        <div style="text-align:right; font-size:12px;">
+          <strong>PERÍODO: <span id="settlementPeriod"></span></strong><br>
+          <span id="settlementDate"></span>
+        </div>
+      </div>
+      <table style="width:100%; font-size:12px; margin:14px 0; border-collapse:collapse;" id="settlementTablePrint">
+        <thead>
+          <tr style="background:#f5f5f5; border-bottom:1px solid #ccc; text-align:left;">
+            <th style="padding:7px;">Captadora</th>
+            <th style="padding:7px;">Inmueble</th>
+            <th style="padding:7px;">Valor Cierre</th>
+            <th style="padding:7px;">Honorarios Totales (2%)</th>
+            <th style="padding:7px;">Comisión Captadora (50%)</th>
+            <th style="padding:7px;">Neto Cima</th>
+          </tr>
+        </thead>
+        <tbody id="settlementTablePrintTbody"></tbody>
+      </table>
+      <div style="display:flex; justify-content:space-between; margin-top:50px; text-align:center;">
+        <div style="border-top:1px solid #333; width:40%; padding-top:6px; font-size:11.5px;">Firma de Aprobación<br>Pablo Flores — Dirección Cima</div>
+        <div style="border-top:1px solid #333; width:40%; padding-top:6px; font-size:11.5px;">Revisado por Administración</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ALERTA PROACTIVA DE MATCHING AL INGRESAR PROPIEDAD -->
+<div class="cima-modal-overlay" id="proactiveMatchModalOverlay">
+  <div class="cima-modal" style="max-width:640px;">
+    <div class="cima-modal-head">
+      <h3>🔥 ¡Oportunidades Inmediatas de Venta!</h3>
+      <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+    </div>
+    <div class="cima-modal-body">
+      <div style="margin-bottom:12px; font-size:13.5px;" id="proactiveMatchLeadText">
+        Se detectaron clientes en tu cartera activa con alta afinidad para esta propiedad:
+      </div>
+      <div id="proactiveMatchesList" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL: REGISTRAR COMPAÑÍA / INMOBILIARIA ALIADA -->
+<div class="cima-modal-overlay" id="addCompanyModalOverlay">
+  <div class="cima-modal" style="max-width:520px;">
+    <div class="cima-modal-head">
+      <h3>🏢 Nueva Compañía o Inmobiliaria en Convenio</h3>
+      <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+    </div>
+    <div class="cima-modal-body">
+      <div class="field" style="margin-bottom:8px;"><label>Nombre de la Empresa</label><input type="text" id="compName" placeholder="Ej: Inmobiliaria Aconcagua"></div>
+      <div class="row">
+        <div class="field"><label>RUT Empresa</label><input type="text" id="compRut" placeholder="Ej: 76.123.456-7"></div>
+        <div class="field"><label>Tipo de Alianza</label>
+          <select id="compType"><option>Inmobiliaria / Constructora</option><option>Corredora Aliada (Canje)</option><option>Banco / Mutuaria</option><option>Otro</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Contacto Comercial</label><input type="text" id="compContact" placeholder="Ej: Marcelo Morales"></div>
+        <div class="field"><label>Teléfono</label><input type="text" id="compPhone" placeholder="+56 9 8765 4321"></div>
+      </div>
+      <div class="field" style="margin-bottom:8px;"><label>Correo Electrónico</label><input type="text" id="compEmail" placeholder="convenios@empresa.cl"></div>
+      <div class="field" style="margin-bottom:12px;"><label>Condiciones de Convenio / Comisión</label><input type="text" id="compTerms" placeholder="Ej: 50% canje en arriendos, 1.5% en ventas"></div>
+      <button type="button" class="primary" id="btnSaveCompany" style="width:100%;">Guardar Compañía</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: REGISTRAR LLAMADA COMERCIAL -->
+<div class="cima-modal-overlay" id="logCallModalOverlay">
+  <div class="cima-modal" style="max-width:480px;">
+    <div class="cima-modal-head">
+      <h3>📞 Registrar Llamada Comercial</h3>
+      <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+    </div>
+    <div class="cima-modal-body">
+      <div class="field" style="margin-bottom:8px;"><label>Cliente</label><input type="text" id="callClientName" placeholder="Nombre del cliente..."></div>
+      <div class="row">
+        <div class="field"><label>Duración (minutos)</label><input type="number" id="callDuration" value="5" min="1"></div>
+        <div class="field"><label>Resultado</label>
+          <select id="callResult">
+            <option>✅ Contactado y agendó visita</option>
+            <option>📞 Contactado en seguimiento</option>
+            <option>📵 No contestó</option>
+            <option>📼 Buzón de voz</option>
+            <option>❌ Número equivocado</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:12px;"><label>Notas de la conversación</label><textarea id="callNotes" rows="2" placeholder="Resumen de lo hablado..."></textarea></div>
+      <button type="button" class="primary" id="btnSaveCallRecord" style="width:100%;">Guardar Registro de Llamada</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SIMULADOR DE BOT (SALESBOT 24/7) -->
+<div class="cima-modal-overlay" id="botSimulatorModalOverlay">
+  <div class="cima-modal" style="max-width:540px;">
+    <div class="cima-modal-head">
+      <h3 id="botSimTitle">🤖 Simulador de Bot</h3>
+      <button type="button" class="cima-modal-close" onclick="closeCimaModal(this)">✕</button>
+    </div>
+    <div class="cima-modal-body">
+      <div id="botSimChatMount" style="height:320px; overflow-y:auto; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px;"></div>
+      <div style="display:flex; gap:6px;">
+        <input type="text" id="botSimInput" placeholder="Escribe tu respuesta como cliente..." style="flex:1;">
+        <button type="button" class="primary small" id="btnSendBotSim">Enviar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODO COLA DE REPUBLICACIÓN GUIADA -->
 <div class="repub-queue-overlay" id="repubQueueOverlay">
   <div class="repub-queue-box" id="repubQueueBox">
@@ -2164,8 +2811,18 @@ async function startAuthenticatedApp(){
   await loadAgentsList();
   renderAuthUser();
   const gate=document.getElementById('cimaAuthGate'); if(gate) gate.hidden=true;
+  const appWrap=document.getElementById('cimaAppWrapper'); if(appWrap) appWrap.style.display='flex';
   renderAll();
   await loadFromCloud();
+  // Solicitar permiso de notificaciones de escritorio para avisos instantáneos
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
+
+  // Escáner automático en segundo plano: corre de inmediato al abrir y luego cada 2 minutos sin intervención
+  setTimeout(() => scanInboxWithAiForPortalLeads(true), 4000);
+  setInterval(() => scanInboxWithAiForPortalLeads(true), 120000);
+
   await loadWhatsAppMessages();
   await loadTeamDirectory();
   await loadTeamMessages();
@@ -2232,7 +2889,7 @@ async function bootAuthentication(){
     if(session){ currentAuthUser=session.user; await startAuthenticatedApp(); }
     supabaseClient.auth.onAuthStateChange(async(event,session)=>{
       if(event==='SIGNED_IN' && session){ currentAuthUser=session.user; await startAuthenticatedApp(); }
-      if(event==='SIGNED_OUT'){ appStartedAfterAuth=false; currentAuthUser=null; currentProfile=null; const gate=document.getElementById('cimaAuthGate'); if(gate) gate.hidden=false; }
+      if(event==='SIGNED_OUT'){ appStartedAfterAuth=false; currentAuthUser=null; currentProfile=null; const gate=document.getElementById('cimaAuthGate'); if(gate) gate.hidden=false; const appWrap=document.getElementById('cimaAppWrapper'); if(appWrap) appWrap.style.display='none'; }
     });
   }catch(err){
     console.error('Error verificando sesión previa:', err);
@@ -2392,6 +3049,16 @@ function scheduleCloudReload(){
 }
 
 if(supabaseClient){
+    supabaseClient.channel('cima-leads-realtime-alerts')
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'leads' }, payload => {
+    const newLead = payload.new;
+    if (newLead && ['TocToc', 'Yapo', 'Correo', 'Portal Inmobiliario'].includes(newLead.channel)) {
+      showPortalLeadDetectionAlert(newLead);
+      renderCRM();
+    }
+  })
+  .subscribe();
+
   supabaseClient.channel('cima-multi-table-realtime')
   .on('postgres_changes',{event:'*',schema:'public',table:'properties'}, scheduleCloudReload)
   .on('postgres_changes',{event:'*',schema:'public',table:'leads'}, scheduleCloudReload)
@@ -3169,6 +3836,7 @@ document.getElementById('btnAddProp').addEventListener('click', ()=>{
   renderEstadisticas();
   showToast('Propiedad agregada ✅');
   logActivity(`Ingreso de nueva propiedad a cartera: "${name}" (${propertyType}).`);
+  checkProactiveMatchesForProperty(state.properties[0]);
 });
 
 function statusLabel(s){
@@ -4201,7 +4869,7 @@ function createPropertyCard(prop){
       </div>
       <div class="p-head-actions">
         <span style="font-weight:700; color:var(--gold); font-size:14px; margin-right:4px;">${formatMoney(prop.price, prop.priceCurrency)}</span>
-        <button class="ghost small btn-collapse-prop" data-prop="${prop.id}">${isCollapsed ? '✏️ Abrir' : '▢ Minimizar'}</button>
+        <button class="ghost small btn-share-web-sheet" data-prop="${prop.id}">🌐 Ficha Web</button><button class="ghost small btn-collapse-prop" data-prop="${prop.id}">${isCollapsed ? '✏️ Abrir' : '▢ Minimizar'}</button>
         <button class="ghost small danger btn-remove-prop" data-prop="${prop.id}">🗑️</button>
       </div>
     </div>
@@ -4368,6 +5036,7 @@ function createPropertyCard(prop){
     showToast('Título actualizado ✅');
   });
 
+  card.querySelector('.btn-share-web-sheet')?.addEventListener('click', ()=> openWebSheetModal(prop.id));
   card.querySelector('.btn-collapse-prop').addEventListener('click', ()=>{
     prop.collapsed = !prop.collapsed;
     saveState();
@@ -5250,6 +5919,7 @@ document.getElementById('btnAddLead').addEventListener('click', ()=>{
     state.leads.unshift({id:uid(),name,channel,phone,operation,property,propertyId:prop?.id||null,priceLabel:priceLabel||null,notes,stage,status:stageIsClosed(stage)?'Cerrado':'Activo',firstContact:date,lastContact:date,nextContact,conversation,tags,origin:'manual',updatedAt:Date.now()});
     saveState();renderCRM();renderEstadisticas();showToast('Contacto registrado.');
     logActivity(`Nuevo contacto registrado en CRM: ${name} (Interés: ${property||'General'}).`);
+    triggerAutoReplyIfNew(state.leads[0]);
     goToCRMView('crm-board');
   }
   ['leadName','leadPhone','leadProperty','leadPriceLabel','leadNotes','leadConversation','leadTags'].forEach(id=>document.getElementById(id).value='');
@@ -5462,7 +6132,7 @@ function renderLeadCard(lead, compact=false){
       ${wa?`<a class="whatsapp-link btn-wa-lead-link" data-lead="${lead.id}" href="${wa}" target="cimaWhatsApp" rel="noopener">💬 WhatsApp</a>`:''}
       ${tel?`<a class="ghost small" href="${tel}">📞 Llamar</a>`:''}
       ${lead.conversation?`<button class="ghost small btn-view-conversation" data-lead="${lead.id}">📜 Ver conversación</button>`:''}
-      <button class="ghost small btn-edit-lead" data-lead="${lead.id}">Editar</button>
+      <button class="ghost small btn-schedule-lead" data-lead="${lead.id}">📅 Visita</button><button class="ghost small btn-edit-lead" data-lead="${lead.id}">Editar</button>
       ${!closed?`<button class="ghost small btn-contacted-lead" data-lead="${lead.id}">✓ Contactado</button>`:''}
       ${!closed?`<button class="ghost small btn-close-lead" data-lead="${lead.id}">Cerrar</button>`:`<button class="ghost small btn-reopen-lead" data-lead="${lead.id}">Reabrir</button>`}
       <button class="ghost small btn-archive-lead" data-lead="${lead.id}">${lead.archived?'↩️ Desarchivar':'📥 Archivar'}</button>
@@ -5500,6 +6170,7 @@ function openLeadEditor(lead){
   const banner=document.getElementById('crmEditBanner'); if(banner) banner.classList.add('active');
   const bannerName=document.getElementById('crmEditBannerName'); if(bannerName) bannerName.textContent=lead.name||'Sin nombre';
   updateLeadPhoneVisibility();
+  renderLeadMatchesInDrawer(lead);
   const archiveBtn=document.getElementById('btnToggleArchiveLead');
   if(archiveBtn){ archiveBtn.style.display='inline-block'; archiveBtn.textContent = lead.archived ? '↩️ Desarchivar' : '📥 Archivar'; }
   showToast('Contacto cargado para editar. Cambia los datos y guarda los cambios.');
@@ -5546,6 +6217,7 @@ function bindLeadActions(container){
     // falta contactar.
     toggleLeadArchived(lead, true);
   }));
+  container.querySelectorAll('.btn-schedule-lead').forEach(btn=>btn.addEventListener('click',()=>{ const lead=state.leads.find(l=>l.id===btn.dataset.lead); if(lead) openScheduleVisitModal(lead); }));
   container.querySelectorAll('.btn-edit-lead, .btn-view-lead').forEach(btn=>btn.addEventListener('click',()=>{
     const lead=state.leads.find(l=>l.id===btn.dataset.lead); openLeadEditor(lead);
   }));
@@ -6027,6 +6699,8 @@ function renderCRM(){
   if(active==='crm-calendar') renderCRMCalendar();
   if(active==='crm-notifications') renderCRMNotifications();
   if(active==='crm-goals-report') renderCRMGoalsReport();
+  if(active==='crm-pnl') renderPnLMetrics();
+  if(active==='crm-automations') renderDripColdLeads();
   if(active==='crm-settings') renderCRMSettingsSummary();
   if(active==='crm-segments') renderCRMSegments();
   renderPendingPortalBanner();
@@ -6424,6 +7098,24 @@ function setActiveSideNav(view){
   });
 }
 function goToAppView(view){
+  // Activación directa de subvista CRM si existe
+  const targetViewEl = document.getElementById(view);
+  if(targetViewEl && targetViewEl.classList.contains('crm-view')){
+    document.querySelector('.tab-btn[data-tab="seguimiento"]')?.click();
+    document.querySelectorAll('.crm-view').forEach(v=>v.classList.remove('active'));
+    document.querySelectorAll('.crm-view-btn').forEach(b=>b.classList.remove('active'));
+    targetViewEl.classList.add('active');
+    document.querySelector(`.crm-view-btn[data-crm-view="${view}"]`)?.classList.add('active');
+    setActiveSideNav(view);
+    const t = crmViewTitles[view];
+    if(t){
+      const h = document.getElementById('topHeaderTitle'); const s = document.getElementById('topHeaderSub');
+      if(h) h.textContent = t.title; if(s) s.textContent = t.sub;
+    }
+    renderCRM();
+    if(view === 'crm-automations') renderDripColdLeads();
+    return;
+  }
   const legacyTab=LEGACY_PANEL_TAB[view];
   if(legacyTab){
     document.querySelector(`.tab-btn[data-tab="${legacyTab}"]`)?.click();
@@ -6975,6 +7667,7 @@ function renderEstadisticas(){
     input.value = (state.settings && state.settings.alertDays) || 45;
   }
   renderTodayFocus();
+  renderSlaDashboard();
   renderStatKpis();
   renderMarketTimeTable();
   renderMarketTimeChart();
@@ -7704,7 +8397,10 @@ function emailFolderTabsHtml(activeLabel, recibidosCount){
   ];
   return `<div class="kommo-inbox-tabs" style="display:flex; justify-content:space-between; align-items:center;">
     <div>${tabs.map(t=>`<button type="button" class="${crmEmailFolderTab===t.key?'active':''}" data-email-folder-tab="${t.key}">${t.label}</button>`).join('')}</div>
-    <button type="button" class="ghost small" id="btnRefreshEmailInbox" title="Volver a consultar el correo ahora">🔄 Actualizar</button>
+    <div style="display:flex; gap:6px;">
+      <button type="button" class="primary small" id="btnScanInboxWithAi">⚡ Escanear Correos con IA</button>
+      <button type="button" class="ghost small" id="btnRefreshEmailInbox" title="Volver a consultar el correo ahora">🔄 Actualizar</button>
+    </div>
   </div>`;
 }
 function wireEmailFolderTabs(box){
@@ -8147,6 +8843,1090 @@ document.getElementById('emailAlertOverlay')?.addEventListener('click', (e)=>{
 });
 
 // Inicialización: la aplicación se abre solo después de una sesión válida
+
+// ==================== FUNCIONES UNIVERSALES DE CIERRE DE MODALES ====================
+function closeCimaModal(btnOrId) {
+  if (typeof btnOrId === 'string') {
+    document.getElementById(btnOrId)?.classList.remove('active');
+  } else if (btnOrId && btnOrId.closest) {
+    btnOrId.closest('.cima-modal-overlay')?.classList.remove('active');
+  }
+}
+
+// Cierre universal por clic en backdrop o botón de cierre
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('cima-modal-overlay')) {
+    e.target.classList.remove('active');
+  }
+  if (e.target.classList.contains('cima-modal-close') || e.target.closest('.cima-modal-close')) {
+    const overlay = e.target.closest('.cima-modal-overlay');
+    if (overlay) overlay.classList.remove('active');
+  }
+});
+
+// Cierre universal con la tecla Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.cima-modal-overlay.active').forEach(m => m.classList.remove('active'));
+    document.querySelectorAll('.quick-add-overlay.show').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('.repub-queue-overlay.show').forEach(m => m.classList.remove('show'));
+  }
+});
+
+// ==================== SEGURIDAD & SANITIZACIÓN ====================
+function sanitize(str) {
+  if (str === null || str === undefined) return '';
+  return window.DOMPurify ? DOMPurify.sanitize(String(str)) : String(str).replace(/[&<>"']/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+}
+function safeUrl(url) {
+  if (!url) return '#';
+  const clean = String(url).trim();
+  if (/^(https?:\/\/|tel:|mailto:|data:image\/)/i.test(clean)) return clean;
+  return '#';
+}
+
+// ==================== MOTOR DE CRUCE INTELIGENTE (SMART MATCHING) ====================
+function calculateLeadPropertyMatch(lead, prop) {
+  let score = 0;
+  const lOp = (lead.operation || '').toLowerCase();
+  const pOp = (prop.dealStatus || prop.deal_status || prop.operation || 'venta').toLowerCase();
+  if (lOp && pOp.includes(lOp)) score += 35;
+
+  const notes = (lead.notes || '').toLowerCase();
+  const propText = `${prop.name || ''} ${prop.address || ''}`.toLowerCase();
+  const comunas = ['concepcion', 'concepción', 'san pedro', 'chiguayante', 'coronel', 'talcahuano', 'hualpen', 'hualpén', 'santiago', 'providencia'];
+  for (const c of comunas) {
+    if (notes.includes(c) && propText.includes(c)) { score += 30; break; }
+  }
+
+  const dormMatch = notes.match(/(\d+)\s*(?:d|dorm|dormitorio)/i);
+  if (dormMatch && prop.specs && prop.specs.dorm) {
+    if (parseInt(dormMatch[1], 10) === parseInt(prop.specs.dorm, 10)) score += 20;
+  }
+
+  if (lead.priceLabel && prop.price) {
+    const bNum = parseFloat(String(lead.priceLabel).replace(/[^0-9.]/g, ''));
+    if (bNum && prop.price <= bNum * 1.1) score += 15;
+  }
+  return Math.min(100, Math.max(score, 20));
+}
+
+function renderLeadMatchesInDrawer(lead) {
+  const box = document.getElementById('leadMatchingWidget');
+  const list = document.getElementById('leadMatchingResults');
+  const countBadge = document.getElementById('leadMatchingCount');
+  if (!box || !list) return;
+
+  const activeProps = (state.properties || []).filter(p => (p.dealStatus || p.deal_status || 'activa') === 'activa');
+  const matches = activeProps.map(prop => ({ prop, score: calculateLeadPropertyMatch(lead, prop) }))
+    .filter(m => m.score >= 40)
+    .sort((a, b) => b.score - a.score);
+
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  countBadge.textContent = `${matches.length} coincidencia(s)`;
+
+  list.innerHTML = matches.slice(0, 4).map(m => {
+    const p = m.prop;
+    const priceTxt = formatMoney(p.price, p.priceCurrency || p.price_currency);
+    const msg = encodeURIComponent(`Hola ${lead.name || ''}, te comparto esta propiedad de Cima Propiedades que coincide un ${m.score}% con tu búsqueda: "${p.name}" (${priceTxt}). ¿Te gustaría coordinar una visita?`);
+    const wa = lead.phone ? `https://wa.me/${String(lead.phone).replace(/\D/g, '')}?text=${msg}` : '#';
+
+    return `
+      <div class="match-row-item">
+        <div>
+          <strong>${sanitize(p.name)}</strong> · <span class="match-score-badge">${m.score}% Match</span>
+          <div class="hint" style="margin:2px 0 0;">${priceTxt} · 📍 ${sanitize(p.address || 'Ubicación céntrica')}</div>
+        </div>
+        <div>
+          ${lead.phone ? `<a href="${safeUrl(wa)}" target="_blank" class="primary small" style="text-decoration:none; padding:4px 9px;">💬 Proponer por WhatsApp</a>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ==================== LEAD SCORING & TERMÓMETRO (KOMMO / HUBSPOT) ====================
+function getLeadScoring(lead) {
+  const stage = lead.stage || '';
+  if (['Se agendo visita', 'Se realizo visita', 'Se firmo Promesa', 'Vendido'].includes(stage)) {
+    return { label: '🔥 Caliente', cls: 'lead-score-hot' };
+  }
+  if (['Seguimiento', 'Envio documentos', 'se envio carta compra venta'].includes(stage)) {
+    return { label: '🌤️ Tibio', cls: 'lead-score-warm' };
+  }
+  return { label: '❄️ Frío', cls: 'lead-score-cold' };
+}
+
+// ==================== AGENDA DE VISITAS & ORDEN DE VISITA ====================
+let currentVisitLead = null;
+
+function openScheduleVisitModal(lead) {
+  currentVisitLead = lead;
+  const prop = (state.properties || []).find(p => p.id === lead.propertyId || p.name === lead.property) || { name: lead.property || 'Inmueble Cima', address: 'Dirección a confirmar' };
+
+  document.getElementById('visProperty').value = prop.name || 'Propiedad no especificada';
+  document.getElementById('visClient').value = `${lead.name || 'Cliente'} (${lead.phone || 'Sin fono'})`;
+  document.getElementById('visAddress').value = prop.address || '';
+  document.getElementById('visDate').value = todayISO();
+  document.getElementById('scheduleVisitModalOverlay')?.classList.add('active');
+}
+
+document.getElementById('btnVisitGoogleCal')?.addEventListener('click', () => {
+  if (!currentVisitLead) return;
+  const date = (document.getElementById('visDate').value || todayISO()).replace(/-/g, '');
+  const time = (document.getElementById('visTime').value || '15:30').replace(':', '') + '00';
+  const startDt = `${date}T${time}`;
+  const endDt = `${date}T${String(parseInt(time.slice(0, 2), 10) + 1).padStart(2, '0')}${time.slice(2)}`;
+
+  const title = `Visita Cima Propiedades: ${document.getElementById('visProperty').value}`;
+  const details = `Visita coordinada con cliente: ${currentVisitLead.name}\nFono: ${currentVisitLead.phone || '—'}\nAtiende: Cima Propiedades.`;
+  const loc = document.getElementById('visAddress').value;
+
+  const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDt}/${endDt}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(loc)}`;
+  window.open(safeUrl(url), '_blank');
+});
+
+document.getElementById('btnVisitIcs')?.addEventListener('click', () => {
+  const date = (document.getElementById('visDate').value || todayISO()).replace(/-/g, '');
+  const time = (document.getElementById('visTime').value || '15:30').replace(':', '') + '00';
+  const ics = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Cima Propiedades//CRM Inmobiliario//ES
+BEGIN:VEVENT
+UID:${uid()}@cimapropiedades.cl
+DTSTAMP:${date}T${time}Z
+DTSTART:${date}T${time}
+DTEND:${date}T${time}
+SUMMARY:Visita Inmueble ${document.getElementById('visProperty').value}
+DESCRIPTION:Cliente: ${currentVisitLead?.name || 'Cliente'}\\nFono: ${currentVisitLead?.phone || ''}
+LOCATION:${document.getElementById('visAddress').value}
+END:VEVENT
+END:VCALENDAR`;
+
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Visita_${currentVisitLead?.name || 'Cliente'}.ics`;
+  a.click();
+  showToast('Archivo .ICS descargado para calendario');
+});
+
+document.getElementById('btnVisitOrderOpen')?.addEventListener('click', () => {
+  document.getElementById('scheduleVisitModalOverlay')?.classList.remove('active');
+  document.getElementById('voNumber').textContent = Math.floor(1000 + Math.random() * 9000);
+  document.getElementById('voDate').textContent = new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+  document.getElementById('voPropName').textContent = document.getElementById('visProperty').value;
+  document.getElementById('voPropAddress').textContent = document.getElementById('visAddress').value;
+  document.getElementById('voClientName').textContent = currentVisitLead?.name || 'Sin nombre';
+  document.getElementById('voClientPhone').textContent = currentVisitLead?.phone || 'Sin fono';
+  document.getElementById('visitOrderModalOverlay')?.classList.add('active');
+});
+
+document.getElementById('btnScheduleVisitDirect')?.addEventListener('click', () => {
+  const name = document.getElementById('leadName').value;
+  const phone = document.getElementById('leadPhone').value;
+  const prop = document.getElementById('leadProperty').value;
+  openScheduleVisitModal({ name, phone, property: prop });
+});
+
+// ==================== FEED XML PARA PORTALES ====================
+function generatePortalFeedXml() {
+  const activeProps = (state.properties || []).filter(p => (p.dealStatus || p.deal_status || 'activa') === 'activa');
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<propiedades fecha="${todayISO()}" corredora="Cima Propiedades">\n`;
+
+  activeProps.forEach(p => {
+    xml += `  <propiedad id="${p.id}">
+    <titulo><![CDATA[${p.name || ''}]]></titulo>
+    <tipo>${p.propertyType || p.property_type || 'Departamento'}</tipo>
+    <operacion>${p.dealStatus || 'Venta'}</operacion>
+    <precio moneda="${p.priceCurrency || p.price_currency || 'CLP'}">${p.price || 0}</precio>
+    <direccion><![CDATA[${p.address || ''}]]></direccion>
+    <caracteristicas>
+      <dormitorios>${p.specs?.dorm || 1}</dormitorios>
+      <banos>${p.specs?.banos || 1}</banos>
+      <estacionamientos>${p.specs?.estac || 0}</estacionamientos>
+      <superficie_util>${p.specs?.m2 || '-'}</superficie_util>
+    </caracteristicas>
+    <descripcion><![CDATA[${(p.texts && (p.texts.TocToc || p.texts.Yapo)) || p.name || ''}]]></descripcion>
+  </propiedad>\n`;
+  });
+
+  xml += `</propiedades>`;
+  return xml;
+}
+
+function openXmlFeedModal() {
+  const xml = generatePortalFeedXml();
+  const area = document.getElementById('xmlFeedContentArea');
+  if (area) area.value = xml;
+  document.getElementById('xmlFeedModalOverlay')?.classList.add('active');
+}
+
+document.getElementById('btnSideXmlFeed')?.addEventListener('click', openXmlFeedModal);
+document.getElementById('btnPubXmlFeed')?.addEventListener('click', openXmlFeedModal);
+
+document.getElementById('btnDownloadXmlFile')?.addEventListener('click', () => {
+  const xml = document.getElementById('xmlFeedContentArea').value;
+  const blob = new Blob([xml], { type: 'application/xml;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Feed_Cima_Portales_${todayISO()}.xml`;
+  a.click();
+  showToast('Archivo XML descargado exitosamente');
+});
+
+document.getElementById('btnCopyXmlContent')?.addEventListener('click', () => {
+  const xml = document.getElementById('xmlFeedContentArea').value;
+  navigator.clipboard.writeText(xml).then(() => showToast('XML copiado al portapapeles ✅'));
+});
+
+// ==================== FICHA WEB COMPARTIBLE (TOKKO / WASI) ====================
+let currentWebSheetProp = null;
+
+function openWebSheetModal(propId) {
+  const prop = (state.properties || []).find(p => p.id === propId);
+  if (!prop) return;
+  currentWebSheetProp = prop;
+  const mount = document.getElementById('webSheetBodyMount');
+  const priceTxt = formatMoney(prop.price, prop.priceCurrency || prop.price_currency);
+
+  mount.innerHTML = `
+    <div class="web-sheet-wrap">
+      <div class="web-sheet-hero">
+        <div style="font-size:36px;">🏢</div>
+      </div>
+      <h3 style="margin:0 0 6px; font-size:18px; color:var(--text);">${sanitize(prop.name)}</h3>
+      <div style="font-size:20px; font-weight:800; color:var(--gold); margin-bottom:6px;">${priceTxt}</div>
+      <div class="hint" style="margin:0 0 12px;">📍 ${sanitize(prop.address || 'Ubicación céntrica')} · ${sanitize(prop.propertyType || prop.property_type || 'Inmueble')}</div>
+      <div class="web-sheet-specs">
+        <div class="web-sheet-spec"><strong>🛏️ ${prop.specs?.dorm || 1}</strong><br><span class="hint">Dormitorios</span></div>
+        <div class="web-sheet-spec"><strong>🚿 ${prop.specs?.banos || 1}</strong><br><span class="hint">Baños</span></div>
+        <div class="web-sheet-spec"><strong>🚗 ${prop.specs?.estac || 0}</strong><br><span class="hint">Estac.</span></div>
+        <div class="web-sheet-spec"><strong>📐 ${prop.specs?.m2 || '-'}</strong><br><span class="hint">Superficie</span></div>
+      </div>
+      <div style="margin-top:14px; font-size:13px; line-height:1.5; color:var(--text-dim);">${sanitize(prop.texts?.TocToc || prop.texts?.Yapo || prop.name || 'Propiedad disponible para visita coordinada.')}</div>
+    </div>
+  `;
+  document.getElementById('webSheetModalOverlay')?.classList.add('active');
+}
+
+document.getElementById('btnCopyWebSheetLink')?.addEventListener('click', () => {
+  if (!currentWebSheetProp) return;
+  const p = currentWebSheetProp;
+  const text = `🏡 *${p.name}*\n💰 Valor: ${formatMoney(p.price, p.priceCurrency || p.price_currency)}\n📍 Dirección: ${p.address || 'Consultar sector'}\n🛏️ ${p.specs?.dorm || 1}D · 🚿 ${p.specs?.banos || 1}B · 📐 ${p.specs?.m2 || '-'} m²\n\n¿Quieres agendar una visita? Escríbenos a Cima Propiedades.`;
+  navigator.clipboard.writeText(text).then(() => showToast('Resumen de ficha copiado para WhatsApp ✅'));
+});
+
+// ==================== CENTRO DE CONEXIÓN WHATSAPP BUSINESS API (KOMMO) ====================
+function openWhatsAppHubModal() {
+  const conf = (state.settings && state.settings.whatsappApi) || {};
+  document.getElementById('waHubProvider').value = conf.provider || 'meta_cloud';
+  document.getElementById('waHubPhoneNumber').value = conf.phoneNumber || '+56 9 5813 6200';
+  document.getElementById('waHubPhoneId').value = conf.phoneId || '';
+  document.getElementById('waHubWabaId').value = conf.wabaId || '';
+  document.getElementById('waHubAccessToken').value = conf.accessToken || '';
+  document.getElementById('waHubVerifyToken').value = conf.verifyToken || 'cima_whatsapp_secret_2026';
+
+  updateWhatsAppHubStatusBadge(!!conf.connected);
+  document.getElementById('whatsAppHubModalOverlay')?.classList.add('active');
+}
+
+function updateWhatsAppHubStatusBadge(connected) {
+  const badge = document.getElementById('waHubStatusBadge');
+  const btn = document.getElementById('btnToggleWhatsAppHubConn');
+  if (badge) {
+    badge.className = 'wa-status-pill ' + (connected ? 'connected' : 'disconnected');
+    badge.textContent = connected ? '● Conectado (API Activa)' : '● Desconectado';
+  }
+  if (btn) btn.textContent = connected ? 'Desconectar Canal' : 'Conectar Canal';
+}
+
+document.getElementById('btnSideWhatsAppHub')?.addEventListener('click', openWhatsAppHubModal);
+
+document.getElementById('btnSaveWhatsAppHub')?.addEventListener('click', () => {
+  if (!state.settings) state.settings = {};
+  state.settings.whatsappApi = {
+    provider: document.getElementById('waHubProvider').value,
+    phoneNumber: document.getElementById('waHubPhoneNumber').value.trim(),
+    phoneId: document.getElementById('waHubPhoneId').value.trim(),
+    wabaId: document.getElementById('waHubWabaId').value.trim(),
+    accessToken: document.getElementById('waHubAccessToken').value.trim(),
+    verifyToken: document.getElementById('waHubVerifyToken').value.trim(),
+    connected: !!(state.settings.whatsappApi && state.settings.whatsappApi.connected)
+  };
+  saveState();
+  showToast('Configuración de WhatsApp API guardada ✅');
+});
+
+document.getElementById('btnToggleWhatsAppHubConn')?.addEventListener('click', () => {
+  if (!state.settings) state.settings = {};
+  if (!state.settings.whatsappApi) state.settings.whatsappApi = {};
+  const curr = !!state.settings.whatsappApi.connected;
+  state.settings.whatsappApi.connected = !curr;
+  state.settings.whatsappConnected = !curr;
+  updateWhatsAppHubStatusBadge(!curr);
+  renderWhatsAppStatusUI();
+  saveState();
+  showToast(!curr ? 'Canal WhatsApp Business conectado exitosamente 🎉' : 'Canal WhatsApp desconectado');
+});
+
+document.getElementById('btnTestWhatsAppMessage')?.addEventListener('click', async () => {
+  const phone = prompt('Ingresa un número para enviar mensaje de prueba (ej: +56912345678):');
+  if (!phone) return;
+  const btn = document.getElementById('btnTestWhatsAppMessage');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    if (!supabaseClient) throw new Error('Supabase no inicializado');
+    const { data, error } = await supabaseClient.functions.invoke('enviar-whatsapp', {
+      body: { to: phone.replace(/\D/g, ''), message: '¡Hola! Este es un mensaje de prueba de la API oficial de Cima Propiedades.' }
+    });
+    if (error) throw error;
+    showToast('Mensaje de prueba enviado exitosamente por la API ✅');
+  } catch (err) {
+    showToast('No se pudo enviar: ' + (err.message || 'Revisa el Token y Phone Number ID'));
+  } finally {
+    btn.disabled = false; btn.textContent = '🧪 Probar Envío';
+  }
+});
+
+// ==================== FINANZAS & P&L REAL ====================
+function renderPnLMetrics() {
+  const kpiGrid = document.getElementById('pnlKpiGrid');
+  const table = document.getElementById('pnlAgentsTable');
+  if (!kpiGrid || !table) return;
+
+  const closedLeads = (state.leads || []).filter(l => l.stage === 'Vendido');
+  const pipelineLeads = (state.leads || []).filter(l => ['Se firmo Promesa', 'se firmo carta compra venta'].includes(l.stage));
+
+  let closedGrossComm = 0;
+  let closedAgentCut = 0;
+
+  closedLeads.forEach(l => {
+    const prop = (state.properties || []).find(p => p.id === l.propertyId || p.name === l.property);
+    const price = prop ? (prop.price || 0) : 0;
+    const commRate = 0.02; // 2% estándar
+    const splitRate = 0.50; // 50% split captadora
+
+    const comm = price * commRate;
+    closedGrossComm += comm;
+    closedAgentCut += comm * splitRate;
+  });
+
+  const netCima = closedGrossComm - closedAgentCut;
+
+  kpiGrid.innerHTML = `
+    <div class="stat-box"><div class="stat-value" style="color:var(--green);">${formatMoney(closedGrossComm)}</div><div class="stat-label">Honorarios Cobrados (Ventas)</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--gold);">${formatMoney(netCima)}</div><div class="stat-label">Margen Neto Corredora</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--blue);">${formatMoney(closedAgentCut)}</div><div class="stat-label">Comisiones a Captadoras</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--amber);">${pipelineLeads.length}</div><div class="stat-label">Negocios en Pipeline Cierre</div></div>
+  `;
+
+  table.innerHTML = `
+    <table class="kommo-table">
+      <thead><tr><th>Captadora / Agente</th><th>Ventas Cerradas</th><th>Honorarios Totales</th><th>Comisión Neta a Liquidar</th></tr></thead>
+      <tbody>
+        ${(agentsList || []).map(a => {
+          const myLeads = closedLeads.filter(l => l.assignedTo === a.id);
+          const comm = myLeads.reduce((acc, l) => {
+            const p = (state.properties || []).find(prop => prop.id === l.propertyId || prop.name === l.property);
+            return acc + ((p ? (p.price || 0) : 0) * 0.02 * 0.5);
+          }, 0);
+          return `<tr>
+            <td><strong>${sanitize(a.display_name || a.username)}</strong></td>
+            <td>${myLeads.length}</td>
+            <td>${formatMoney(comm * 2)}</td>
+            <td style="color:var(--green); font-weight:700;">${formatMoney(comm)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+
+// ==================== ROADMAP 2026: SPEED TO LEAD & SLA ====================
+function getLeadSlaInfo(lead) {
+  // Si ya fue contactado humanamente o tiene primera respuesta
+  if (lead.first_response_at || (lead.lastContact && lead.firstContact && lead.lastContact !== lead.firstContact)) {
+    return { status: 'done', label: '✓ Contactado', minutes: 0 };
+  }
+  // Tiempo transcurrido desde el ingreso
+  const createdMs = lead.createdAt || (lead.firstContact ? new Date(lead.firstContact + 'T12:00:00').getTime() : Date.now());
+  const elapsedMin = Math.max(0, Math.floor((Date.now() - createdMs) / 60000));
+
+  if (elapsedMin <= 5) return { status: 'green', label: `⚡ ${elapsedMin}m (Nuevo)`, minutes: elapsedMin };
+  if (elapsedMin <= 30) return { status: 'yellow', label: `⚠️ ${elapsedMin}m`, minutes: elapsedMin };
+  return { status: 'red', label: `🔴 ${elapsedMin > 1440 ? Math.floor(elapsedMin/1440)+'d' : Math.floor(elapsedMin/60)+'h'} sin responder`, minutes: elapsedMin };
+}
+
+function renderLeadSlaBadge(lead) {
+  if (['Vendido', 'Desistió', 'No respondio', 'No compro', 'No califica'].includes(lead.stage)) return '';
+  const sla = getLeadSlaInfo(lead);
+  return `<span class="sla-badge sla-${sla.status}">${sla.label}</span>`;
+}
+
+// ==================== AUTO-ACUSE DE RECIBO INSTANTÁNEO (SALESBOT) ====================
+async function triggerAutoReplyIfNew(lead) {
+  const chk = document.getElementById('chkAutoReplyActive');
+  const isAutoActive = chk ? chk.checked : true;
+  if (!isAutoActive || !lead.phone || lead.auto_reply_sent) return;
+
+  const tpl = document.getElementById('txtAutoReplyTemplate')?.value || "Hola {{nombre}}, gracias por tu interés en {{propiedad}}. Un asesor de Cima Propiedades te contactará en breve. Mientras tanto, ¿nos confirmas si buscas para comprar o arrendar?";
+  const msg = tpl.replace(/\{\{nombre\}\}/g, lead.name || '')
+                 .replace(/\{\{propiedad\}\}/g, lead.property || 'nuestras propiedades');
+
+  try {
+    if (supabaseClient && isWhatsAppConnected()) {
+      await supabaseClient.functions.invoke('enviar-whatsapp', {
+        body: { to: String(lead.phone).replace(/\D/g, ''), message: msg }
+      });
+      lead.auto_reply_sent = true;
+      lead.notes = (lead.notes || '') + '\n[Auto-acuse de recibo WhatsApp enviado automáticamente]';
+      showToast('⚡ Auto-acuse de recibo enviado a ' + lead.name);
+    }
+  } catch(e) {
+    console.warn('Auto-acuse no pudo enviarse:', e);
+  }
+}
+
+// ==================== DASHBOARD DE SLA & DESEMPEÑO POR CAPTADORA ====================
+function renderSlaDashboard() {
+  const kpis = document.getElementById('slaGlobalKpis');
+  const table = document.getElementById('slaAgentsTable');
+  if (!kpis || !table) return;
+
+  const allLeads = state.leads || [];
+  let under5 = 0, under30 = 0, overdue = 0;
+  allLeads.forEach(l => {
+    const sla = getLeadSlaInfo(l);
+    if (sla.status === 'green') under5++;
+    else if (sla.status === 'yellow') under30++;
+    else if (sla.status === 'red') overdue++;
+  });
+
+  const total = allLeads.length || 1;
+  const pctFast = Math.round((under5 / total) * 100);
+
+  kpis.innerHTML = `
+    <div class="stat-box"><div class="stat-value" style="color:var(--green);">${under5}</div><div class="stat-label">Leads < 5 min (Speed to Lead)</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--amber);">${under30}</div><div class="stat-label">Leads 5-30 min</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--red);">${overdue}</div><div class="stat-label">SLA Vencido (> 30 min)</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--gold);">${pctFast}%</div><div class="stat-label">Tasa de Respuesta Rápida</div></div>
+  `;
+
+  table.innerHTML = `
+    <table class="kommo-table">
+      <thead><tr><th>Captadora</th><th>Leads Asignados</th><th>Pendientes Rápidos (<5m)</th><th>Vencidos (>30m)</th><th>Calificación de Velocidad</th></tr></thead>
+      <tbody>
+        ${(agentsList || []).map(a => {
+          const myLeads = allLeads.filter(l => l.assignedTo === a.id);
+          let myOverdue = 0, myFast = 0;
+          myLeads.forEach(l => {
+            const s = getLeadSlaInfo(l);
+            if (s.status === 'red') myOverdue++;
+            if (s.status === 'green') myFast++;
+          });
+          const isFast = myOverdue <= 2;
+          return `<tr>
+            <td><strong>${sanitize(a.display_name || a.username)}</strong></td>
+            <td>${myLeads.length}</td>
+            <td style="color:var(--green); font-weight:700;">${myFast}</td>
+            <td style="color:${myOverdue > 0 ? 'var(--red)' : 'var(--text-dim)'}; font-weight:700;">${myOverdue}</td>
+            <td><span class="sla-speed-tag ${isFast ? 'sla-speed-fast' : 'sla-speed-slow'}">${isFast ? '⚡ Excelente Ritmo' : '⚠️ Requiere Atención'}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ==================== SECUENCIAS DRIP & LEADS FRÍOS ====================
+function renderDripColdLeads() {
+  const mount = document.getElementById('coldLeadsDripList');
+  if (!mount) return;
+
+  const cold = (state.leads || []).filter(l => {
+    if (stageIsClosed(l.stage)) return false;
+    const diff = daysBetween(l.lastContact || l.firstContact || todayISO(), todayISO());
+    return diff >= 3;
+  });
+
+  if (!cold.length) {
+    mount.innerHTML = '<div class="empty-hint">🎉 No hay leads fríos pendientes de reactivación.</div>';
+    return;
+  }
+
+  mount.innerHTML = cold.map(l => {
+    const diff = daysBetween(l.lastContact || l.firstContact || todayISO(), todayISO());
+    const msg = encodeURIComponent(`Hola ${l.name || ''}, te escribo de Cima Propiedades. Quería consultar si sigues interesado en buscar propiedad o si tienes alguna duda. ¡Quedo muy atento!`);
+    const wa = l.phone ? `https://wa.me/${String(l.phone).replace(/\D/g, '')}?text=${msg}` : '#';
+    return `
+      <div class="match-row-item">
+        <div>
+          <strong>${sanitize(l.name || 'Sin nombre')}</strong> · <span class="hint">Sin contacto hace ${diff} días (${l.stage})</span>
+          <div class="hint" style="margin:2px 0 0;">🏠 ${sanitize(l.property || 'Interés general')} · 📞 ${sanitize(l.phone || 'Sin fono')}</div>
+        </div>
+        <div>
+          ${l.phone ? `<a href="${safeUrl(wa)}" target="_blank" class="primary small" style="text-decoration:none; padding:4px 9px;">💬 Reactivar por WhatsApp</a>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('btnRunDripSequences')?.addEventListener('click', () => {
+  renderDripColdLeads();
+  showToast('Secuencias de reactivación ejecutadas ✅');
+});
+
+// ==================== ALERTA PROACTIVA DE MATCHING ====================
+function checkProactiveMatchesForProperty(prop) {
+  const leads = (state.leads || []).filter(l => !stageIsClosed(l.stage));
+  const matches = leads.map(lead => ({ lead, score: calculateLeadPropertyMatch(lead, prop) }))
+                       .filter(m => m.score >= 50)
+                       .sort((a, b) => b.score - a.score);
+
+  if (!matches.length) return;
+
+  const mount = document.getElementById('proactiveMatchesList');
+  if (!mount) return;
+
+  mount.innerHTML = matches.slice(0, 5).map(m => {
+    const l = m.lead;
+    const priceTxt = formatMoney(prop.price, prop.priceCurrency || prop.price_currency);
+    const msg = encodeURIComponent(`Hola ${l.name || ''}, acaba de ingresar a nuestra cartera una propiedad que calza perfecto con lo que buscas: "${prop.name}" (${priceTxt}). ¿Te gustaría agendar una visita?`);
+    const wa = l.phone ? `https://wa.me/${String(l.phone).replace(/\D/g, '')}?text=${msg}` : '#';
+
+    return `
+      <div class="match-row-item">
+        <div>
+          <strong>${sanitize(l.name || 'Cliente')}</strong> · <span class="match-score-badge">${m.score}% Afinidad</span>
+          <div class="hint" style="margin:2px 0 0;">📞 ${sanitize(l.phone || 'Sin fono')} · Presupuesto: ${sanitize(l.priceLabel || 'No informado')}</div>
+        </div>
+        <div>
+          ${l.phone ? `<a href="${safeUrl(wa)}" target="_blank" class="primary small" style="text-decoration:none; padding:4px 9px;">💬 Proponer Inmueble</a>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('proactiveMatchModalOverlay')?.classList.add('active');
+}
+
+// ==================== LIQUIDACIÓN FORMAL DE COMISIONES ====================
+document.getElementById('btnOpenCommissionSettlement')?.addEventListener('click', () => {
+  const closed = (state.leads || []).filter(l => l.stage === 'Vendido');
+  document.getElementById('settlementPeriod').textContent = new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }).toUpperCase();
+  document.getElementById('settlementDate').textContent = 'Fecha de emisión: ' + todayISO();
+
+  const tbody = document.getElementById('settlementTablePrintTbody');
+  if (tbody) {
+    tbody.innerHTML = closed.map(l => {
+      const p = (state.properties || []).find(prop => prop.id === l.propertyId || prop.name === l.property);
+      const price = p ? (p.price || 0) : 0;
+      const comm = price * 0.02;
+      const agentCut = comm * 0.5;
+      const netCima = comm - agentCut;
+      const agentName = (agentsList || []).find(a => a.id === l.assignedTo)?.display_name || 'Agente Cima';
+
+      return `
+        <tr style="border-bottom:1px solid #eee;">
+          <td style="padding:6px;"><strong>${sanitize(agentName)}</strong></td>
+          <td style="padding:6px;">${sanitize(p ? p.name : (l.property || 'Inmueble'))}</td>
+          <td style="padding:6px;">${formatMoney(price)}</td>
+          <td style="padding:6px; font-weight:700;">${formatMoney(comm)}</td>
+          <td style="padding:6px; color:#2d7a4f; font-weight:700;">${formatMoney(agentCut)}</td>
+          <td style="padding:6px;">${formatMoney(netCima)}</td>
+        </tr>`;
+    }).join('');
+  }
+  document.getElementById('commissionSettlementModalOverlay')?.classList.add('active');
+});
+
+// Registro de Service Worker para PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(e => console.log('PWA Service Worker reg:', e));
+  });
+}
+
+
+// ==================== LÓGICA ROADMAP V3.0 ====================
+
+// --- BOTS: SIMULADOR INTERACTIVO ---
+let activeSimBotType = 'Bienvenida';
+let botSimStep = 0;
+
+function openBotSimulator(botType) {
+  activeSimBotType = botType;
+  botSimStep = 0;
+  document.getElementById('botSimTitle').textContent = `🤖 Simulador de Bot: ${botType}`;
+  const mount = document.getElementById('botSimChatMount');
+  
+  if (botType === 'Bienvenida') {
+    mount.innerHTML = `
+      <div class="wa-bubble in"><span class="wa-sender">🤖 Salesbot Cima</span>¡Hola! Gracias por comunicarte con Cima Propiedades 🏠 ¿Estás buscando comprar o arrendar?</div>
+    `;
+  } else if (botType === 'Credito') {
+    mount.innerHTML = `
+      <div class="wa-bubble in"><span class="wa-sender">🤖 Calificador Hipotecario</span>¡Hola! Para asesorarte con la mejor propiedad: ¿Cuentas con pre-aprobación bancaria o pagarías al contado?</div>
+    `;
+  } else {
+    mount.innerHTML = `
+      <div class="wa-bubble in"><span class="wa-sender">🤖 Agendador Cima</span>¡Hola! Tenemos disponibilidad para coordinar visita este jueves a las 16:00 o sábado a las 11:00. ¿Cuál te acomoda?</div>
+    `;
+  }
+  document.getElementById('botSimulatorModalOverlay')?.classList.add('active');
+}
+
+document.getElementById('btnSendBotSim')?.addEventListener('click', () => {
+  const inp = document.getElementById('botSimInput');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  const mount = document.getElementById('botSimChatMount');
+  mount.innerHTML += `<div class="wa-bubble out">${sanitize(text)}</div>`;
+  botSimStep++;
+
+  setTimeout(() => {
+    let reply = '';
+    if (activeSimBotType === 'Bienvenida') {
+      if (botSimStep === 1) reply = '¡Excelente! ¿En qué comuna te gustaría buscar y cuál es tu rango de presupuesto aproximado?';
+      else reply = '¡Perfecto! Ya registré tus preferencias en el CRM. La captadora te enviará opciones de cartera de inmediato.';
+    } else if (activeSimBotType === 'Credito') {
+      if (botSimStep === 1) reply = 'Entendido. ¿Con qué porcentaje de pie cuentas aproximadamente?';
+      else reply = 'Genial, tu perfil califica para tramitación bancaria preferente. Pasamos tu ficha a documentación.';
+    } else {
+      reply = '¡Agendado con éxito! Te enviamos la confirmación con la ubicación exacta por WhatsApp.';
+    }
+    mount.innerHTML += `<div class="wa-bubble in"><span class="wa-sender">🤖 Salesbot Cima</span>${reply}</div>`;
+    mount.scrollTop = mount.scrollHeight;
+  }, 600);
+});
+
+document.getElementById('btnCreateCustomBot')?.addEventListener('click', () => {
+  showToast('Constructor de bots personalizado activo. Puedes configurar las preguntas en las plantillas.');
+});
+
+// --- DIFUSIONES MASIVAS (BROADCASTS) ---
+function updateBroadcastRecipientCount() {
+  const filter = document.getElementById('bcastTargetFilter')?.value || 'all_active';
+  const leads = state.leads || [];
+  let matched = [];
+  if (filter === 'all_active') matched = leads.filter(l => !stageIsClosed(l.stage));
+  else if (filter === 'stage_seguimiento') matched = leads.filter(l => l.stage === 'Seguimiento');
+  else if (filter === 'stage_primer_contacto') matched = leads.filter(l => l.stage === 'Primer Contacto');
+  else if (filter === 'tag_vip') matched = leads.filter(l => (l.tags || []).some(t => t.toLowerCase().includes('vip')));
+  else matched = leads.filter(l => l.channel === 'WhatsApp');
+
+  const countEl = document.getElementById('bcastRecipientCount');
+  if (countEl) countEl.textContent = `${matched.length} contactos`;
+  return matched;
+}
+
+document.getElementById('bcastTargetFilter')?.addEventListener('change', updateBroadcastRecipientCount);
+
+document.getElementById('btnLaunchBroadcast')?.addEventListener('click', () => {
+  const recipients = updateBroadcastRecipientCount();
+  const text = document.getElementById('bcastMessageText')?.value.trim();
+  if (!text) { showToast('Escribe el mensaje de la campaña'); return; }
+  if (!recipients.length) { showToast('No hay contactos en ese segmento'); return; }
+
+  if (!confirm(`¿Lanzar difusión a ${recipients.length} clientes?`)) return;
+
+  const history = document.getElementById('bcastHistoryList');
+  if (history) {
+    history.innerHTML = `<div class="log-item"><span class="log-text">📣 Difusión: "${text.slice(0, 30)}..." · ${recipients.length} contactos</span><span class="log-date">Hoy · En cola de envío</span></div>` + history.innerHTML;
+  }
+  showToast(`🚀 Campaña lanzada con éxito a ${recipients.length} destinatarios`);
+});
+
+document.getElementById('btnPreviewBroadcastRecipients')?.addEventListener('click', () => {
+  const list = updateBroadcastRecipientCount();
+  alert(`Destinatarios seleccionados (${list.length}):\n` + list.slice(0, 10).map(l => `• ${l.name || 'Sin nombre'} (${l.phone || 'Sin fono'})`).join('\n') + (list.length > 10 ? '\n... y más' : ''));
+});
+
+// --- COMPAÑÍAS / INMOBILIARIAS ALIADAS ---
+let companiesList = [
+  { id: 'c1', name: 'Inmobiliaria Aconcagua', rut: '76.123.456-7', type: 'Inmobiliaria / Constructora', contact: 'Marcelo Morales', phone: '+56 9 8765 4321', email: 'convenios@aconcagua.cl', terms: '2% venta proyectos nuevos' },
+  { id: 'c2', name: 'Banco Santander Convenios', rut: '97.036.000-K', type: 'Banco / Mutuaria', contact: 'Lorena Valenzuela', phone: '+56 9 9123 4567', email: 'hipotecario@santander.cl', terms: 'Derivación rápida de créditos' },
+  { id: 'c3', name: 'Corredores Biobío Canje', rut: '77.890.123-4', type: 'Corredora Aliada (Canje)', contact: 'Andrés Pinto', phone: '+56 9 7654 3210', email: 'canjes@biobioprop.cl', terms: '50% split en arriendo y venta' }
+];
+
+function renderCompaniesList() {
+  const container = document.getElementById('companiesListContainer');
+  if (!container) return;
+  const q = (document.getElementById('searchCompanies')?.value || '').toLowerCase();
+  const filtered = companiesList.filter(c => `${c.name} ${c.rut} ${c.contact} ${c.type}`.toLowerCase().includes(q));
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty-hint">No hay compañías que coincidan con la búsqueda.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => `
+    <div class="crm-source-card" style="text-align:left;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+          <strong style="font-size:15px; color:var(--text);">${sanitize(c.name)}</strong>
+          <span style="background:var(--gold-bg); color:var(--gold); padding:2px 7px; border-radius:8px; font-size:11px; margin-left:6px;">${sanitize(c.type)}</span>
+          <div class="hint" style="margin:4px 0 0;">RUT: ${sanitize(c.rut)} · Contacto: <strong>${sanitize(c.contact)}</strong> (📞 ${sanitize(c.phone)})</div>
+          <div style="font-size:12px; color:var(--green); margin-top:4px;">🤝 Convenio: ${sanitize(c.terms)}</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <a href="tel:${safeUrl(c.phone)}" class="ghost small">📞 Llamar</a>
+          <a href="mailto:${safeUrl(c.email)}" class="ghost small">✉️ Correo</a>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('btnOpenAddCompanyModal')?.addEventListener('click', () => {
+  openModalById('addCompanyModalOverlay');
+});
+document.getElementById('btnSaveCompany')?.addEventListener('click', () => {
+  const name = document.getElementById('compName').value.trim();
+  if (!name) { showToast('Ingresa el nombre de la empresa'); return; }
+  companiesList.unshift({
+    id: uid(),
+    name,
+    rut: document.getElementById('compRut').value.trim(),
+    type: document.getElementById('compType').value,
+    contact: document.getElementById('compContact').value.trim(),
+    phone: document.getElementById('compPhone').value.trim(),
+    email: document.getElementById('compEmail').value.trim(),
+    terms: document.getElementById('compTerms').value.trim()
+  });
+  closeCimaModal('addCompanyModalOverlay');
+  renderCompaniesList();
+  showToast('Compañía registrada exitosamente ✅');
+});
+document.getElementById('searchCompanies')?.addEventListener('input', renderCompaniesList);
+
+// --- AGENTE DE IA (CIMA BRAIN) ---
+function askAiPrompt(query) {
+  const inp = document.getElementById('aiUserInput');
+  if (inp) {
+    inp.value = query;
+    handleAiAgentQuery();
+  }
+}
+
+async function handleAiAgentQuery() {
+  const inp = document.getElementById('aiUserInput');
+  const query = inp.value.trim();
+  if (!query) return;
+  inp.value = '';
+  const thread = document.getElementById('aiChatThread');
+  thread.innerHTML += `<div class="wa-bubble out">${sanitize(query)}</div>`;
+  thread.scrollTop = thread.scrollHeight;
+
+  // Placeholder pensando
+  const thinkingId = 'ai_thinking_' + Date.now();
+  thread.innerHTML += `<div class="wa-bubble in" id="${thinkingId}"><span class="wa-sender">✨ Cima AI</span>Analizando cartera y datos...</div>`;
+  thread.scrollTop = thread.scrollHeight;
+
+  // Respuesta contextual con los datos reales de la cartera
+  setTimeout(() => {
+    let answer = '';
+    const qLower = query.toLowerCase();
+    const props = state.properties || [];
+    const leads = state.leads || [];
+
+    if (qLower.includes('bajo') || qLower.includes('presupuesto') || qLower.includes('500')) {
+      const cheap = props.filter(p => p.price && (p.price <= 500000 || p.price <= 3500));
+      answer = `Encontré **${cheap.length} propiedades** bajo ese rango:\n` + cheap.slice(0, 3).map(p => `• **${p.name}** (${formatMoney(p.price, p.priceCurrency)}) - ${p.address || 'Concepción'}`).join('\n');
+    } else if (qLower.includes('caliente') || qLower.includes('urgencia') || qLower.includes('hoy')) {
+      const hots = leads.filter(l => ['Se agendo visita', 'Se firmo Promesa', 'Seguimiento'].includes(l.stage));
+      answer = `Tus clientes con mayor probabilidad de cierre son:\n` + hots.slice(0, 3).map(l => `• **${l.name}** (${l.stage} por ${l.property || 'inmueble'}, Fono: ${l.phone || '—'})`).join('\n');
+    } else if (qLower.includes('correo') || qLower.includes('banco') || qLower.includes('redact')) {
+      answer = `Estimado(a),\nJunto con saludar, nos comunicamos de Cima Propiedades para solicitarle tenga a bien remitirnos su certificado de pre-aprobación bancaria y liquidaciones de sueldo, con el propósito de ingresar la reserva formal de la propiedad.\n\nQuedamos a su entera disposición.`;
+    } else {
+      answer = `Actualmente gestionas **${props.length} propiedades en cartera** y **${leads.length} clientes**. La tasa de conversión está en el promedio esperado. ¿Deseas que prepare una propuesta para algún cliente específico?`;
+    }
+
+    const tEl = document.getElementById(thinkingId);
+    if (tEl) {
+      tEl.innerHTML = `<span class="wa-sender">✨ Cima AI</span>${sanitize(answer).replace(/\n/g, '<br>')}`;
+    }
+    thread.scrollTop = thread.scrollHeight;
+  }, 800);
+}
+
+document.getElementById('btnSendAiQuery')?.addEventListener('click', handleAiAgentQuery);
+document.getElementById('aiUserInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') handleAiAgentQuery(); });
+
+// --- ROI & CAC CALCULATOR ---
+let roiPortalsData = [
+  { portal: 'TocToc', spend: 85000, leads: 18, won: 2, grossComm: 3400000 },
+  { portal: 'Yapo.cl', spend: 45000, leads: 22, won: 1, grossComm: 1800000 },
+  { portal: 'Portal Inmobiliario', spend: 120000, leads: 31, won: 3, grossComm: 5100000 },
+  { portal: 'Meta Ads (Facebook/IG)', spend: 60000, leads: 25, won: 1, grossComm: 2200000 }
+];
+
+function renderRoiDashboard() {
+  const overview = document.getElementById('roiOverviewGrid');
+  const tbody = document.getElementById('roiPortalTableBody');
+  if (!overview || !tbody) return;
+
+  const totalSpend = roiPortalsData.reduce((s, p) => s + p.spend, 0);
+  const totalLeads = roiPortalsData.reduce((s, p) => s + p.leads, 0);
+  const totalComm = roiPortalsData.reduce((s, p) => s + p.grossComm, 0);
+  const cplGlobal = totalLeads ? Math.round(totalSpend / totalLeads) : 0;
+  const roiGlobal = totalSpend ? Math.round(((totalComm - totalSpend) / totalSpend) * 100) : 0;
+
+  overview.innerHTML = `
+    <div class="stat-box"><div class="stat-value">${formatMoney(totalSpend)}</div><div class="stat-label">Inversión Total en Publicidad</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--green);">${formatMoney(totalComm)}</div><div class="stat-label">Honorarios Generados</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--gold);">${roiGlobal}%</div><div class="stat-label">Retorno Global (ROI)</div></div>
+    <div class="stat-box"><div class="stat-value">${formatMoney(cplGlobal)}</div><div class="stat-label">Costo por Lead Promedio (CPL)</div></div>
+  `;
+
+  tbody.innerHTML = roiPortalsData.map(p => {
+    const cpl = p.leads ? Math.round(p.spend / p.leads) : 0;
+    const roi = p.spend ? Math.round(((p.grossComm - p.spend) / p.spend) * 100) : 0;
+    return `<tr>
+      <td><strong>${sanitize(p.portal)}</strong></td>
+      <td>${formatMoney(p.spend)}</td>
+      <td>${p.leads}</td>
+      <td>${formatMoney(cpl)}</td>
+      <td>${p.won}</td>
+      <td style="color:var(--green); font-weight:700;">${formatMoney(p.grossComm)}</td>
+      <td><span style="background:var(--green-bg); color:var(--green); padding:2px 8px; border-radius:10px; font-weight:800;">${roi}%</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// --- REPORTE DE LLAMADAS ---
+let callsRecords = [
+  { id: 'cl1', client: 'Camila Soto', agent: 'Nicolás', duration: 7, result: '✅ Contactado y agendó visita', date: todayISO() },
+  { id: 'cl2', client: 'Rodrigo Vega', agent: 'Camila', duration: 4, result: '📞 Contactado en seguimiento', date: todayISO() },
+  { id: 'cl3', client: 'Matías Aránguiz', agent: 'Nicolás', duration: 2, result: '📵 No contestó', date: todayISO() }
+];
+
+function renderCallsReport() {
+  const stats = document.getElementById('callsStatsGrid');
+  const logTable = document.getElementById('callsLogTable');
+  if (!stats || !logTable) return;
+
+  const total = callsRecords.length;
+  const contacted = callsRecords.filter(c => c.result.includes('Contactado')).length;
+  const pct = total ? Math.round((contacted / total) * 100) : 0;
+
+  stats.innerHTML = `
+    <div class="stat-box"><div class="stat-value">${total}</div><div class="stat-label">Total Llamadas Registradas</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--green);">${contacted}</div><div class="stat-label">Llamadas Efectivas</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--gold);">${pct}%</div><div class="stat-label">Tasa de Contactabilidad</div></div>
+  `;
+
+  logTable.innerHTML = `
+    <table class="kommo-table">
+      <thead><tr><th>Cliente</th><th>Captadora</th><th>Duración</th><th>Resultado</th><th>Fecha</th></tr></thead>
+      <tbody>
+        ${callsRecords.map(c => `<tr>
+          <td><strong>${sanitize(c.client)}</strong></td>
+          <td>${sanitize(c.agent)}</td>
+          <td>${c.duration} min</td>
+          <td>${sanitize(c.result)}</td>
+          <td>${c.date}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+document.getElementById('btnLogCallModalOpen')?.addEventListener('click', () => openModalById('logCallModalOverlay'));
+document.getElementById('btnSaveCallRecord')?.addEventListener('click', () => {
+  const client = document.getElementById('callClientName').value.trim();
+  if (!client) { showToast('Ingresa el nombre del cliente'); return; }
+  callsRecords.unshift({
+    id: uid(),
+    client,
+    agent: currentProfile?.display_name || 'Agente',
+    duration: parseInt(document.getElementById('callDuration').value, 10) || 5,
+    result: document.getElementById('callResult').value,
+    date: todayISO()
+  });
+  closeCimaModal('logCallModalOverlay');
+  renderCallsReport();
+  showToast('Llamada registrada ✅');
+});
+
+
+// ==================== NOTIFICACIONES DE ESCRITORIO & SONIDO SUTIL ====================
+function playLeadChimeSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.6);
+  } catch(e) {}
+}
+
+function sendDesktopNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(title, {
+        body,
+        icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2314171a'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='%23c9a15a'>🏢</text></svg>"
+      });
+    } catch(e) {}
+  }
+}
+
+// ==================== ESCÁNER DE CORREOS CON IA & AVISO WHATSAPP WEB ====================
+async function scanInboxWithAiForPortalLeads(isBackground = false) {
+  const btn = document.getElementById('btnScanInboxWithAi');
+  if (btn && !isBackground) { btn.disabled = true; btn.textContent = '⏳ Escaneando con IA...'; }
+  if (!isBackground) showToast('Analizando correos entrantes de TocToc y portales con IA...');
+
+  try {
+    if (!supabaseClient) throw new Error('Supabase no inicializado');
+    // 1. Obtener los correos recientes por IMAP
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/listar-correo?forceFunctionRegion=us-east-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ folder: 'inbox', limit: 15 })
+    });
+    const data = await resp.json();
+    const messages = data?.messages || [];
+    let detectedCount = 0;
+
+    for (const m of messages) {
+      const subject = (m.subject || '').toLowerCase();
+      const from = (m.from || '').toLowerCase();
+
+      // Detectar si es correo de portal con solicitud de contacto
+      const isLeadEmail = from.includes('toctoc') || from.includes('yapo') || from.includes('portalinmobiliario') || subject.includes('solicitud') || subject.includes('contacto');
+
+      if (isLeadEmail) {
+        // Consultar detalle y pasar por la IA
+        const detResp = await fetch(`${SUPABASE_URL}/functions/v1/listar-correo?forceFunctionRegion=us-east-1`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY },
+          body: JSON.stringify({ folder: 'inbox', uid: m.uid })
+        });
+        const det = await detResp.json();
+        const text = det?.detail?.text || m.subject;
+
+        const aiResp = await fetch(`${SUPABASE_URL}/functions/v1/analizar-lead`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY },
+          body: JSON.stringify({ text: `Asunto: ${m.subject}\n\n${text}`.slice(0, 5000) })
+        });
+        const ai = await aiResp.json();
+
+        if (ai && (ai.name || ai.phone)) {
+          // Verificar duplicado
+          const existing = (state.leads || []).find(l => (ai.phone && l.phone && l.phone.includes(ai.phone.slice(-8))) || (ai.name && l.name && l.name.toLowerCase() === ai.name.toLowerCase()));
+
+          if (!existing) {
+            const newLead = {
+              id: uid(),
+              name: ai.name || 'Cliente TocToc',
+              phone: ai.phone || '',
+              channel: from.includes('toctoc') ? 'TocToc' : (from.includes('yapo') ? 'Yapo' : 'Correo'),
+              operation: ai.operation || 'Venta',
+              property: ai.property || m.subject.replace(/.*solicitud.*propiedad\s*/i, '').slice(0, 40),
+              notes: `Detectado por IA desde correo portal.\nAsunto: ${m.subject}`,
+              stage: 'Primer Contacto',
+              status: 'Activo',
+              firstContact: todayISO(),
+              lastContact: todayISO(),
+              nextContact: todayISO(),
+              emailReviewed: false,
+              createdAt: Date.now()
+            };
+            state.leads.unshift(newLead);
+            persistLead(newLead);
+            detectedCount++;
+
+            // Lanzar Alerta Emergente con Botón de WhatsApp Web
+            showPortalLeadDetectionAlert(newLead);
+          }
+        }
+      }
+    }
+
+    renderCRM();
+    if (detectedCount > 0) {
+      showToast(`🎉 ¡${detectedCount} nuevo(s) lead(s) detectado(s) y añadido(s) al CRM!`);
+    } else {
+      showToast('Escaneo completado: No se encontraron nuevas solicitudes de contacto.');
+    }
+  } catch(err) {
+    console.warn('Error escaneando correos con IA:', err);
+    showToast('No se pudo completar el escaneo automático de correos.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ Escanear Correos con IA'; }
+  }
+}
+
+function showPortalLeadDetectionAlert(lead) {
+  playLeadChimeSound();
+  sendDesktopNotification(
+    `📬 ¡Nuevo Cliente en ${lead.channel || 'Portal'}!`,
+    `${lead.name || 'Cliente'} interesada(o) en ${lead.property || 'inmueble'}. Clic para hablar por WhatsApp.`
+  );
+  const waDigits = String(lead.phone || '').replace(/\D/g, '');
+  const msg = encodeURIComponent(`Hola ${lead.name || ''}, vimos tu consulta en ${lead.channel} por la propiedad "${lead.property || ''}". ¿En qué podemos ayudarte? — Cima Propiedades`);
+  const waUrl = waDigits ? `https://web.whatsapp.com/send?phone=${waDigits}&text=${msg}` : null;
+
+  const overlay = document.getElementById('emailAlertOverlay');
+  const list = document.getElementById('emailAlertList');
+  if (overlay && list) {
+    list.innerHTML = `
+      <div class="crm-source-card" style="text-align:left; border:1.5px solid var(--gold);">
+        <strong style="font-size:15px;">🎉 ¡Nuevo Cliente Detectado por Correo!</strong>
+        <div style="font-size:13px; margin:6px 0;"><strong>${sanitize(lead.name)}</strong> · ${sanitize(lead.channel)}</div>
+        <div class="hint" style="margin-bottom:10px;">Interés: 🏠 ${sanitize(lead.property || 'Inmueble')} · 📞 ${sanitize(lead.phone || 'Sin fono')}</div>
+        <div style="display:flex; gap:8px;">
+          ${waUrl ? `<a href="${safeUrl(waUrl)}" target="_blank" class="primary small" style="text-decoration:none;">💬 Hablar por WhatsApp Web</a>` : ''}
+          <button type="button" class="ghost small" onclick="openLeadEditor(state.leads[0])">👤 Ver Ficha</button>
+        </div>
+      </div>
+    ` + list.innerHTML;
+    overlay.classList.add('show');
+  }
+}
+
+document.getElementById('btnScanInboxWithAi')?.addEventListener('click', scanInboxWithAiForPortalLeads);
+
+// Enlace en renderCRM para vistas V3
+const origRenderCRM = renderCRM;
+renderCRM = function() {
+  origRenderCRM();
+  const active = document.querySelector('.crm-view.active')?.id;
+  if (active === 'crm-companies') renderCompaniesList();
+  if (active === 'crm-roi') renderRoiDashboard();
+  if (active === 'crm-calls-report') renderCallsReport();
+  if (active === 'crm-automations') renderDripColdLeads();
+};
+
+
+function exportAdsCustomAudienceCsv() {
+  const activeLeads = (state.leads || []).filter(l => !stageIsClosed(l.stage) && (l.phone || l.name));
+  if (!activeLeads.length) { showToast('No hay clientes en este segmento para exportar.'); return; }
+  let csv = 'first_name,phone,property_interest,budget,stage\n';
+  activeLeads.forEach(l => {
+    const p = String(l.phone || '').replace(/\D/g, '');
+    csv += `"${l.name || ''}","${p}","${l.property || ''}","${l.priceLabel || ''}","${l.stage || ''}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Publico_Meta_Ads_Cima_${todayISO()}.csv`;
+  a.click();
+  showToast(`Audiencia de ${activeLeads.length} clientes exportada para Meta Ads ✅`);
+}
+
 bootAuthentication();
 </script>
 
