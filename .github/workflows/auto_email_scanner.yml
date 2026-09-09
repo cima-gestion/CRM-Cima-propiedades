@@ -1,0 +1,20 @@
+name: Escáner Automático de Correos Inmobiliarios (24/7)
+
+on:
+  schedule:
+    # Se ejecuta automáticamente cada 5 minutos, las 24 horas del día
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-new-leads:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invocar Edge Function leer-correo en Supabase
+        run: |
+          echo "Invocando escáner de correos de TocToc, Yapo y portales..."
+          curl -s -X POST "https://rbpsdtsprnbzsloudbsz.supabase.co/functions/v1/leer-correo?forceFunctionRegion=us-east-1" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_qhImGGKzda-uR12-yE7wZg_xpXfyKK4' }}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_qhImGGKzda-uR12-yE7wZg_xpXfyKK4' }}" \
+            -H "Content-Type: application/json"
+          echo "Escaneo 24/7 completado exitosamente."
