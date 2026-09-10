@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
 <meta name="theme-color" content="#c9a15a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -3642,19 +3642,22 @@ const DEFAULT_STAGE_CONFIG = [
   {name:'No califica', color:'var(--text-dim)', isClosed:true}
 ];
 
+let state = null;
 let STAGE_OPTIONS = DEFAULT_STAGE_CONFIG.map(s => s.name);
 let CLOSED_STAGES = new Set(DEFAULT_STAGE_CONFIG.filter(s => s.isClosed).map(s => s.name));
 
-function getCustomStages() {
-  if (state.settings && Array.isArray(state.settings.stages) && state.settings.stages.length) {
-    return state.settings.stages;
+function getCustomStages(customSettings) {
+  const s = customSettings || (state && state.settings);
+  if (s && Array.isArray(s.stages) && s.stages.length) {
+    return s.stages;
   }
   return DEFAULT_STAGE_CONFIG;
 }
 
-function stageIsClosed(stage) {
-  if (state.settings && Array.isArray(state.settings.stages)) {
-    const found = state.settings.stages.find(s => (typeof s === 'string' ? s : s.name) === stage);
+function stageIsClosed(stage, customSettings) {
+  const s = customSettings || (state && state.settings);
+  if (s && Array.isArray(s.stages)) {
+    const found = s.stages.find(item => (typeof item === 'string' ? item : item.name) === stage);
     if (found && typeof found === 'object' && found.isClosed !== undefined) return !!found.isClosed;
   }
   return CLOSED_STAGES.has(stage);
@@ -3807,8 +3810,8 @@ function normalizeState(data){
     if(l.nextContact === undefined || l.nextContact === null || l.nextContact === ''){
       l.nextContact = addDays(l.lastContact || todayISO(), 7);
     }
-    if(l.status === undefined || l.status === null) l.status = stageIsClosed(l.stage) ? 'Cerrado' : 'Activo';
-    if(stageIsClosed(l.stage)) l.status='Cerrado';
+    if(l.status === undefined || l.status === null) l.status = stageIsClosed(l.stage, data.settings) ? 'Cerrado' : 'Activo';
+    if(stageIsClosed(l.stage, data.settings)) l.status='Cerrado';
     else if(l.status==='Cerrado') l.status='Activo';
     if(l.assignedTo === undefined) l.assignedTo = null;
     return l;
@@ -3906,8 +3909,8 @@ function loadState(){
       if(Array.isArray(parsed.platforms)) {
         parsed.platforms.forEach(pl => { if(!mergedPlatforms.includes(pl)) mergedPlatforms.push(pl); });
       }
-      if(parsed.settings && parsed.settings.alertDays) {
-        mergedSettings.alertDays = parsed.settings.alertDays;
+      if(parsed.settings) {
+        Object.assign(mergedSettings, parsed.settings);
       }
       if(parsed.sortOrder) mergedSortOrder = parsed.sortOrder;
       if(parsed.collapsedFolders) Object.assign(mergedCollapsedFolders, parsed.collapsedFolders);
@@ -3931,7 +3934,7 @@ function loadState(){
   return stateData;
 }
 
-let state = loadState();
+state = loadState();
 if(!Array.isArray(state.bitacora)) state.bitacora = [];
 
 let cloudDebounceTimer = null;
