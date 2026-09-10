@@ -857,6 +857,79 @@ body.mobile-sidebar-open .sidebar-mobile-backdrop {
     max-height: calc(88vh - 70px) !important;
     overflow-y: auto !important;
   }
+  /* Calendario Móvil (Cuadrícula 100% simétrica de 7 días sin desborde) */
+  .kommo-cal-head {
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  .kommo-cal-title {
+    font-size: 15px !important;
+  }
+  .kommo-cal-nav button {
+    padding: 4px 8px !important;
+    font-size: 11.5px !important;
+  }
+  .kommo-cal-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    gap: 3px !important;
+    width: 100% !important;
+  }
+  .kommo-cal-dow {
+    font-size: 9.5px !important;
+    padding: 4px 0 !important;
+    letter-spacing: -0.3px !important;
+  }
+  .kommo-cal-day {
+    min-height: 48px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    padding: 3px 1px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 6px !important;
+  }
+  .kommo-cal-day .d-num {
+    font-size: 12.5px !important;
+    margin-bottom: 1px !important;
+    width: 24px !important;
+    height: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+  }
+  .kommo-cal-day.today .d-num {
+    border: 1.5px solid var(--gold) !important;
+    color: var(--gold) !important;
+  }
+  .kommo-cal-day.selected {
+    background: rgba(201,161,90,0.18) !important;
+    border-color: var(--gold) !important;
+  }
+  .kommo-cal-day.selected .d-num {
+    background: var(--gold) !important;
+    color: #14171a !important;
+    font-weight: 800 !important;
+  }
+  .kommo-cal-day .d-items-desktop {
+    display: none !important;
+  }
+  .cal-mobile-dots {
+    display: flex !important;
+  }
+  .kommo-cal-daylist {
+    margin-top: 14px !important;
+  }
+  .cal-view-tabs {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .cal-tab-btn {
+    flex: 1 !important;
+    text-align: center !important;
+  }
 }
 @media (min-width: 901px) {
   body.sidebar-collapsed .main-wrapper {
@@ -1095,19 +1168,26 @@ body.mobile-sidebar-open .sidebar-mobile-backdrop {
   .kommo-table-name{ display:flex; align-items:center; gap:9px; font-weight:700; white-space:nowrap; }
 
   /* ===== Calendario ===== */
+  .cal-view-tabs{ display:inline-flex; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:3px; gap:3px; }
+  .cal-tab-btn{ background:transparent; border:none; color:var(--text-dim); padding:5px 12px; border-radius:6px; font:600 12px var(--font-ui); cursor:pointer; transition:all .15s ease; }
+  .cal-tab-btn.active{ background:var(--gold); color:#14171a; font-weight:700; }
   .kommo-cal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; flex-wrap:wrap; }
   .kommo-cal-title{ font-size:15px; font-weight:700; color:var(--text); text-transform:capitalize; }
   .kommo-cal-nav{ display:flex; gap:6px; }
-  .kommo-cal-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
-  .kommo-cal-dow{ font-size:10.5px; font-weight:700; text-transform:uppercase; color:var(--text-dim); text-align:center; padding:4px 0; }
-  .kommo-cal-day{ min-height:76px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:6px; font-size:11px; cursor:pointer; transition:border-color .12s; }
+  .kommo-cal-grid{ display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px; width:100%; box-sizing:border-box; }
+  .kommo-cal-dow{ font-size:10.5px; font-weight:700; text-transform:uppercase; color:var(--text-dim); text-align:center; padding:4px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .kommo-cal-day{ min-height:76px; min-width:0; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:6px; font-size:11px; cursor:pointer; transition:border-color .12s; overflow:hidden; box-sizing:border-box; }
   .kommo-cal-day:hover{ border-color:var(--gold); }
   .kommo-cal-day.out{ opacity:.35; }
   .kommo-cal-day.today{ border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold); }
+  .kommo-cal-day.selected{ border-color:var(--gold); background:rgba(201,161,90,0.12); box-shadow:0 0 0 2px var(--gold); }
   .kommo-cal-day .d-num{ font-weight:700; color:var(--text); margin-bottom:4px; }
   .kommo-cal-day .d-item{ font-size:9.5px; background:var(--gold-bg); color:var(--gold); border-radius:4px; padding:1px 5px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .kommo-cal-day .d-more{ font-size:9px; color:var(--text-dim); }
   .kommo-cal-daylist{ margin-top:16px; }
+  .cal-mobile-dots{ display:none; align-items:center; justify-content:center; gap:2.5px; margin-top:2px; flex-wrap:wrap; }
+  .cal-dot{ width:5.5px; height:5.5px; border-radius:50%; background:var(--gold); display:inline-block; }
+  .cal-dot-plus{ font-size:8px; color:var(--gold); line-height:1; font-weight:800; }
 
   /* ===== Notificaciones ===== */
   .kommo-notif-item{ display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:var(--bg-panel-2); margin-bottom:8px; }
@@ -2201,22 +2281,41 @@ body.mobile-sidebar-open .sidebar-mobile-backdrop {
       <div class="card">
         <div class="crm-page-head">
           <div>
-            <h3>📅 Calendario</h3>
+            <h3>📅 Calendario & Agenda</h3>
             <div class="hint">Días con próximos contactos agendados. Haz clic en un día o en una cita para ver, editar o sincronizar con Google Calendar.</div>
           </div>
-          <button type="button" class="primary small" id="btnOpenAddCalendarEvent">+ Agendar Contacto o Visita</button>
-        </div>
-        <div class="kommo-cal-head">
-          <div class="kommo-cal-title" id="crmCalTitle"></div>
-          <div class="kommo-cal-nav">
-            <button type="button" class="ghost small" id="crmCalPrev">← Mes anterior</button>
-            <button type="button" class="ghost small" id="crmCalToday">Hoy</button>
-            <button type="button" class="ghost small" id="crmCalNext">Mes siguiente →</button>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div class="cal-view-tabs" id="calViewSwitcher">
+              <button type="button" class="cal-tab-btn active" id="btnCalViewMonth">📅 Mes</button>
+              <button type="button" class="cal-tab-btn" id="btnCalViewAgenda">📋 Próximas Citas</button>
+            </div>
+            <button type="button" class="primary small" id="btnOpenAddCalendarEvent">+ Agendar Contacto o Visita</button>
           </div>
         </div>
-        <div class="kommo-cal-grid" id="crmCalDow"></div>
-        <div class="kommo-cal-grid" id="crmCalGrid" style="margin-top:6px;"></div>
-        <div class="kommo-cal-daylist" id="crmCalDayList"></div>
+
+        <!-- VISTA MES -->
+        <div id="calMonthViewContainer">
+          <div class="kommo-cal-head">
+            <div class="kommo-cal-title" id="crmCalTitle"></div>
+            <div class="kommo-cal-nav">
+              <button type="button" class="ghost small" id="crmCalPrev" title="Mes anterior">← Mes ant.</button>
+              <button type="button" class="ghost small" id="crmCalToday">Hoy</button>
+              <button type="button" class="ghost small" id="crmCalNext" title="Mes siguiente">Mes sig. →</button>
+            </div>
+          </div>
+          <div class="kommo-cal-grid" id="crmCalDow"></div>
+          <div class="kommo-cal-grid" id="crmCalGrid" style="margin-top:6px;"></div>
+          <div class="kommo-cal-daylist" id="crmCalDayList"></div>
+        </div>
+
+        <!-- VISTA AGENDA -->
+        <div id="calAgendaViewContainer" style="display:none; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <h4 style="margin:0; font-size:14px; color:var(--text);">📋 Agenda Cronológica de Visitas y Llamadas</h4>
+            <span class="hint" id="calAgendaCountBadge">0 citas próximas</span>
+          </div>
+          <div id="crmCalAgendaList"></div>
+        </div>
       </div>
     </div>
 
@@ -7771,11 +7870,12 @@ function renderCRMAllLeads(){
 
 window.crmCalendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 window.crmCalendarSelectedDay = todayISO();
+window.crmCalendarActiveView = 'month';
+
 function renderCRMCalendar(){
   const titleEl=document.getElementById('crmCalTitle');
   const dowEl=document.getElementById('crmCalDow');
   const gridEl=document.getElementById('crmCalGrid');
-  const listEl=document.getElementById('crmCalDayList');
   if(!titleEl||!gridEl) return;
   const month=window.crmCalendarMonth;
   titleEl.textContent=month.toLocaleDateString('es-CL',{month:'long',year:'numeric'});
@@ -7792,6 +7892,7 @@ function renderCRMCalendar(){
   const startOffset=(firstOfMonth.getDay()+6)%7; // lunes=0
   const gridStart=new Date(firstOfMonth); gridStart.setDate(gridStart.getDate()-startOffset);
   const today=todayISO();
+  const selectedDay=window.crmCalendarSelectedDay||today;
   let cells='';
   for(let i=0;i<42;i++){
     const d=new Date(gridStart); d.setDate(gridStart.getDate()+i);
@@ -7799,15 +7900,32 @@ function renderCRMCalendar(){
     const out=d.getMonth()!==month.getMonth();
     const items=leadsByDay[iso]||[];
     const isToday=iso===today;
-    cells+=`<div class="kommo-cal-day${out?' out':''}${isToday?' today':''}" data-cal-day="${iso}">
+    const isSelected=iso===selectedDay;
+
+    const dotColors = items.slice(0, 3).map(l => {
+      const isVisit = (l.stage||'').toLowerCase().includes('visita');
+      return isVisit ? '#5a9bd9' : 'var(--gold)';
+    });
+    const dotsHtml = dotColors.length ? `
+      <div class="cal-mobile-dots">
+        ${dotColors.map(c => `<span class="cal-dot" style="background:${c};"></span>`).join('')}
+        ${items.length > 3 ? `<span class="cal-dot-plus">+</span>` : ''}
+      </div>` : '';
+
+    cells+=`<div class="kommo-cal-day${out?' out':''}${isToday?' today':''}${isSelected?' selected':''}" data-cal-day="${iso}">
       <div class="d-num">${d.getDate()}</div>
-      ${items.slice(0,2).map(l=>`<div class="d-item" data-cal-lead-id="${escapeAttr(l.id)}" title="Clic para ver, editar o sincronizar con Google Calendar">${escapeHtml(l.name||'Lead')}</div>`).join('')}
-      ${items.length>2?`<div class="d-more">+${items.length-2} más</div>`:''}
+      ${dotsHtml}
+      <div class="d-items-desktop">
+        ${items.slice(0,2).map(l=>`<div class="d-item" data-cal-lead-id="${escapeAttr(l.id)}" title="Clic para ver, editar o sincronizar con Google Calendar">${escapeHtml(l.name||'Lead')}</div>`).join('')}
+        ${items.length>2?`<div class="d-more">+${items.length-2} más</div>`:''}
+      </div>
     </div>`;
   }
   gridEl.innerHTML=cells;
   gridEl.querySelectorAll('[data-cal-day]').forEach(cell=>cell.addEventListener('click',()=>{
     window.crmCalendarSelectedDay=cell.dataset.calDay;
+    gridEl.querySelectorAll('.kommo-cal-day').forEach(c => c.classList.remove('selected'));
+    cell.classList.add('selected');
     renderCRMCalendarDayList();
   }));
   gridEl.querySelectorAll('.d-item[data-cal-lead-id]').forEach(item=>{
@@ -7817,6 +7935,7 @@ function renderCRMCalendar(){
     });
   });
   renderCRMCalendarDayList();
+  renderCRMAgendaView();
 }
 
 function renderCRMCalendarDayList(){
@@ -7826,33 +7945,34 @@ function renderCRMCalendarDayList(){
   const label=new Date(iso+'T00:00:00').toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});
   
   const headerHtml = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin:10px 0 12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
-      <h4 style="margin:0; font-size:14px; color:var(--text); text-transform:capitalize;">📅 ${escapeHtml(label)}</h4>
-      <button type="button" class="primary small" id="btnCalDayAddEvent" style="padding:4px 10px; font-size:12px;">+ Agendar en este día</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin:10px 0 12px; border-bottom:1px solid var(--border); padding-bottom:8px; flex-wrap:wrap; gap:8px;">
+      <h4 style="margin:0; font-size:14px; color:var(--text); text-transform:capitalize;">📅 Citas del ${escapeHtml(label)}</h4>
+      <button type="button" class="primary small" id="btnCalDayAddEvent" style="padding:4px 10px; font-size:11.5px;">+ Agendar en este día</button>
     </div>`;
 
   if(!leads.length){
-    listEl.innerHTML=headerHtml + `<div class="crm-empty" style="padding:16px;">No hay contactos ni visitas agendadas este día.</div>`;
+    listEl.innerHTML=headerHtml + `<div class="crm-empty" style="padding:16px; font-size:12.5px;">No hay contactos ni visitas agendadas para este día.</div>`;
     listEl.querySelector('#btnCalDayAddEvent')?.addEventListener('click', ()=>openCalendarEventModal(null, iso));
     return;
   }
 
   listEl.innerHTML=headerHtml + leads.map(l=>{
     const timeStr = l.meetingTime || '11:00';
+    const cleanPhone = String(l.phone || '').replace(/\D/g, '');
     return `
       <div class="crm-source-card" style="text-align:left; margin-bottom:8px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-left:3px solid var(--gold);">
-        <div style="flex:1 1 240px;">
-          <div style="display:flex; align-items:center; gap:6px;">
+        <div style="flex:1 1 200px; min-width:0;">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
             <strong style="font-size:14px;">${escapeHtml(l.name||'Sin nombre')}</strong>
-            <span class="hint" style="font-size:11.5px; background:var(--bg-panel-2); padding:1px 6px; border-radius:6px;">🕒 ${timeStr} hrs</span>
+            <span class="hint" style="font-size:11.5px; background:var(--bg-panel-2); padding:1px 6px; border-radius:6px; color:var(--gold); font-weight:700;">🕒 ${timeStr} hrs</span>
             <span class="hint">(${escapeHtml(l.stage)})</span>
           </div>
           <div class="hint" style="margin:3px 0 0; font-size:12px;">🏠 ${escapeHtml(l.property||'Interés general')} · 📞 ${escapeHtml(l.phone||'Sin fono')}</div>
           ${l.notes ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">📝 ${escapeHtml(l.notes.slice(0, 90))}</div>` : ''}
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button type="button" class="primary small" data-cal-edit-lead="${escapeAttr(l.id)}">📅 Editar / Google Cal</button>
-          ${l.phone ? `<a href="https://wa.me/${String(l.phone).replace(/\D/g,'')}" target="_blank" class="ghost small" style="text-decoration:none; padding:4px 8px;">💬 WhatsApp</a>` : ''}
+          <button type="button" class="primary small" data-cal-edit-lead="${escapeAttr(l.id)}" style="padding:5px 9px; font-size:11.5px;">📅 Editar / Google Cal</button>
+          ${cleanPhone ? `<a href="https://wa.me/${cleanPhone}" target="_blank" class="ghost small" style="text-decoration:none; padding:5px 9px; font-size:11.5px; display:inline-flex; align-items:center;">💬 WhatsApp</a>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -7863,10 +7983,102 @@ function renderCRMCalendarDayList(){
   });
 }
 
+function renderCRMAgendaView() {
+  const container = document.getElementById('crmCalAgendaList');
+  const badge = document.getElementById('calAgendaCountBadge');
+  if (!container) return;
+
+  const today = todayISO();
+  const activeLeads = (state.leads || [])
+    .filter(l => l.nextContact && !stageIsClosed(l.stage))
+    .sort((a, b) => {
+      const cmp = a.nextContact.localeCompare(b.nextContact);
+      if (cmp !== 0) return cmp;
+      return (a.meetingTime || '11:00').localeCompare(b.meetingTime || '11:00');
+    });
+
+  if (badge) badge.textContent = `${activeLeads.length} citas próximas`;
+
+  if (!activeLeads.length) {
+    container.innerHTML = `<div class="crm-empty" style="padding:22px; font-size:13px;">No hay citas ni contactos agendados próximamente.</div>`;
+    return;
+  }
+
+  const groups = {};
+  activeLeads.forEach(l => {
+    (groups[l.nextContact] = groups[l.nextContact] || []).push(l);
+  });
+
+  let html = '';
+  Object.keys(groups).sort().forEach(dateIso => {
+    const isPast = dateIso < today;
+    const isToday = dateIso === today;
+    const dateObj = new Date(dateIso + 'T00:00:00');
+    const dateTitle = dateObj.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const tag = isToday ? '<span style="background:var(--green-bg); color:var(--green); font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; margin-left:8px;">HOY</span>'
+              : (isPast ? '<span style="background:rgba(220,53,69,0.2); color:#ff6b6b; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; margin-left:8px;">PENDIENTE</span>' : '');
+
+    html += `
+      <div style="margin-bottom:18px;">
+        <div style="display:flex; align-items:center; margin-bottom:8px; font-weight:700; font-size:13.5px; color:var(--text); text-transform:capitalize;">
+          📅 ${escapeHtml(dateTitle)} ${tag}
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${groups[dateIso].map(l => {
+            const timeStr = l.meetingTime || '11:00';
+            const cleanPhone = String(l.phone || '').replace(/\D/g, '');
+            return `
+              <div class="crm-source-card" style="padding:12px 14px; text-align:left; border-left:3px solid var(--gold); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="flex:1 1 200px; min-width:0;">
+                  <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <strong style="font-size:14px;">${escapeHtml(l.name || 'Sin nombre')}</strong>
+                    <span style="font-size:11.5px; background:var(--bg-panel-2); padding:1px 6px; border-radius:6px; color:var(--gold); font-weight:700;">🕒 ${timeStr} hrs</span>
+                    <span class="hint">(${escapeHtml(l.stage)})</span>
+                  </div>
+                  <div class="hint" style="margin:3px 0 0; font-size:12px;">🏠 ${escapeHtml(l.property || 'Interés general')} · 📞 ${escapeHtml(l.phone || 'Sin fono')}</div>
+                  ${l.notes ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">📝 ${escapeHtml(l.notes.slice(0, 90))}</div>` : ''}
+                </div>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <button type="button" class="primary small" data-cal-edit-lead="${escapeAttr(l.id)}" style="padding:5px 9px; font-size:11.5px;">📅 Editar / Google Cal</button>
+                  ${cleanPhone ? `<a href="https://wa.me/${cleanPhone}" target="_blank" class="ghost small" style="text-decoration:none; padding:5px 9px; font-size:11.5px; display:inline-flex; align-items:center;">💬 WhatsApp</a>` : ''}
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  });
+
+  container.innerHTML = html;
+  container.querySelectorAll('[data-cal-edit-lead]').forEach(btn => {
+    btn.addEventListener('click', () => openCalendarEventModal(btn.dataset.calEditLead));
+  });
+}
+
 document.getElementById('crmCalPrev')?.addEventListener('click', ()=>{ window.crmCalendarMonth=new Date(window.crmCalendarMonth.getFullYear(),window.crmCalendarMonth.getMonth()-1,1); renderCRMCalendar(); });
 document.getElementById('crmCalNext')?.addEventListener('click', ()=>{ window.crmCalendarMonth=new Date(window.crmCalendarMonth.getFullYear(),window.crmCalendarMonth.getMonth()+1,1); renderCRMCalendar(); });
 document.getElementById('crmCalToday')?.addEventListener('click', ()=>{ const n=new Date(); window.crmCalendarMonth=new Date(n.getFullYear(),n.getMonth(),1); window.crmCalendarSelectedDay=todayISO(); renderCRMCalendar(); });
 document.getElementById('btnOpenAddCalendarEvent')?.addEventListener('click', ()=>{ openCalendarEventModal(null, window.crmCalendarSelectedDay || todayISO()); });
+
+document.getElementById('btnCalViewMonth')?.addEventListener('click', ()=>{
+  window.crmCalendarActiveView = 'month';
+  document.getElementById('btnCalViewMonth')?.classList.add('active');
+  document.getElementById('btnCalViewAgenda')?.classList.remove('active');
+  const monthCont = document.getElementById('calMonthViewContainer');
+  const agendaCont = document.getElementById('calAgendaViewContainer');
+  if(monthCont) monthCont.style.display = 'block';
+  if(agendaCont) agendaCont.style.display = 'none';
+  renderCRMCalendar();
+});
+document.getElementById('btnCalViewAgenda')?.addEventListener('click', ()=>{
+  window.crmCalendarActiveView = 'agenda';
+  document.getElementById('btnCalViewAgenda')?.classList.add('active');
+  document.getElementById('btnCalViewMonth')?.classList.remove('active');
+  const monthCont = document.getElementById('calMonthViewContainer');
+  const agendaCont = document.getElementById('calAgendaViewContainer');
+  if(monthCont) monthCont.style.display = 'none';
+  if(agendaCont) agendaCont.style.display = 'block';
+  renderCRMAgendaView();
+});
 
 // ==================== MODAL DE CALENDARIO & GOOGLE CALENDAR ====================
 function openCalendarEventModal(leadId, targetDate) {
