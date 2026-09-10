@@ -1131,6 +1131,85 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
   .sla-speed-fast { background: var(--green-bg); color: var(--green); }
   .sla-speed-slow { background: var(--red-bg); color: var(--red); }
 
+
+
+  /* ===== MODO MÓVIL CAPTADORAS & NAVEGACIÓN INFERIOR (PWA) ===== */
+  .mobile-captadora-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 62px;
+    background: var(--bg-panel-2, #161b22);
+    border-top: 1px solid var(--border, rgba(201,161,90,0.25));
+    z-index: 9999;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 4px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.5);
+  }
+  .mc-nav-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 100%;
+    cursor: pointer;
+    position: relative;
+    font: 600 11px var(--font-ui);
+    transition: color 0.15s ease;
+  }
+  .mc-nav-btn.active {
+    color: var(--gold);
+  }
+  .mc-nav-btn .mc-icon {
+    font-size: 20px;
+  }
+  .mc-badge {
+    position: absolute;
+    top: 6px;
+    right: calc(50% - 16px);
+    background: var(--danger);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 10px;
+  }
+  @media (max-width: 768px) {
+    .mobile-captadora-nav { display: flex !important; }
+    body { padding-bottom: 68px !important; }
+    .side-nav { display: none !important; }
+    .top-header { padding: 8px 12px; }
+  }
+  .role-captadora .mobile-captadora-nav { display: flex; }
+
+  /* ===== ALERTA DE INTERVENCIÓN HUMANA URGENTE ===== */
+  .urgent-human-badge {
+    background: rgba(220,53,69,0.2);
+    color: #ff6b6b;
+    border: 1px solid #ff6b6b;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220,53,69,0.4); }
+    70% { box-shadow: 0 0 0 8px rgba(220,53,69,0); }
+    100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+  }
+
 </style>
 </head>
 <body>
@@ -1568,6 +1647,7 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
             <div class="field"><label>Nombre del cliente</label><input type="text" id="leadName" placeholder="Ej: Camila Soto"></div>
             <div class="field"><label>Canal</label><select id="leadChannel"><option>WhatsApp</option><option>Facebook</option><option>Yapo</option><option>Proppit</option><option>TocToc</option><option>Correo</option><option>Otro</option></select></div>
             <div class="field" id="leadPhoneField"><label>Número de WhatsApp</label><input type="text" id="leadPhone" placeholder="Ej: +56 9 1234 5678"></div>
+            <div class="field" id="leadEmailField"><label>Correo electrónico (Email)</label><input type="email" id="leadEmail" placeholder="Ej: cliente@correo.cl"></div>
             <div class="field"><label>Busca</label><select id="leadOperation"><option>Arriendo</option><option>Venta</option></select></div>
           </div>
           <div class="row">
@@ -1596,8 +1676,37 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
           <div class="row">
             <div class="field" style="flex:1 1 100%;"><label>Etiquetas</label><input type="text" id="leadTags" placeholder="Ej: VIP, Urgente, Comercio Mayorista (separadas por coma)"></div>
           </div>
+          <!-- CONTENEDOR DINÁMICO DE CAMPOS PERSONALIZADOS -->
+          <div id="leadCustomFieldsContainer" style="display:none; margin:12px 0; padding:12px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px;">
+            <div style="font-size:12px; font-weight:700; color:var(--gold); text-transform:uppercase; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+              <span>📋 Campos Personalizados</span>
+              <button type="button" class="ghost small" onclick="goToAppView('crm-settings'); switchSettingsTab('custom-fields');" style="font-size:11px; padding:2px 8px;">⚙️ Personalizar campos</button>
+            </div>
+            <div id="leadCustomFieldsInputs" class="row" style="margin-bottom:0; gap:10px; flex-wrap:wrap;"></div>
+          </div>
           
           <!-- MOTOR DE CRUCE INTELIGENTE (MATCHING) -->
+          <!-- PANEL DE COMPROBACIÓN DE CORREO Y ENLACE DEL PORTAL -->
+          <div id="leadEmailSourceCard" style="display:none; background:rgba(212,175,55,0.09); border:1.5px solid rgba(212,175,55,0.35); border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+              <span style="font-weight:700; color:var(--gold); font-size:13.5px;" id="leadEmailSourceTitle">📩 Origen: Consulta recibida por Correo de Portal</span>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="primary small" id="btnViewLeadOriginalEmail">✉️ Ver contenido del correo</button>
+                <button type="button" class="ghost small" id="btnCleanLeadNotes">🧹 Limpiar notas</button>
+              </div>
+            </div>
+            <div class="row" style="margin-bottom:0;">
+              <div class="field" style="flex:1 1 100%;">
+                <label style="font-size:12px; font-weight:600;">🔗 Enlace de la publicación en el portal (TocToc / Yapo / etc.)</label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <input type="url" id="leadPortalLink" placeholder="https://www.toctoc.com/propiedades/..." style="flex:1;">
+                  <a id="btnOpenPortalLink" href="#" target="_blank" rel="noopener" class="primary small" style="display:none; text-decoration:none; white-space:nowrap; padding:6px 12px;">🌐 Comprobar aviso en portal ↗</a>
+                </div>
+                <div class="hint" style="font-size:11.5px; margin-top:3px;">Haz clic en <strong>"Comprobar aviso en portal"</strong> para abrir directamente la publicación y verificar si el inmueble y los datos del registro coinciden.</div>
+              </div>
+            </div>
+          </div>
+
           <div id="leadMatchingWidget" class="match-widget-box" style="display:none;">
             <div class="match-widget-title">
               <span>🎯 Propiedades Coincidentes (Smart Matching)</span>
@@ -2169,31 +2278,314 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
 
     <!-- ===== Ajustes ===== -->
     <div class="crm-view" id="crm-settings">
-      <div class="card">
-        <div class="crm-page-head"><div><h3>👤 Perfil</h3><div class="hint">Sesión actual y estado de la organización.</div></div></div>
-        <div class="stat-grid">
-          <div class="stat-box"><div class="stat-value" id="settingsUserName">—</div><div class="stat-label">Usuario conectado</div></div>
-          <div class="stat-box"><div class="stat-value" id="settingsSyncState">—</div><div class="stat-label">Estado de sincronización</div></div>
+      <!-- SUBNAV DE PERSONALIZACIÓN Y AJUSTES -->
+      <div class="crm-subnav" style="margin-bottom:18px;" id="settingsNavTabs">
+        <button type="button" class="settings-tab-btn active" data-settings-tab="pipeline">🏷️ Embudo & Etapas</button>
+        <button type="button" class="settings-tab-btn" data-settings-tab="custom-fields">📋 Campos Personalizados</button>
+        <button type="button" class="settings-tab-btn" data-settings-tab="channels">📢 Canales & Portales</button>
+        <button type="button" class="settings-tab-btn" data-settings-tab="sla">⏱️ Tiempos SLA & Reglas</button>
+        <button type="button" class="settings-tab-btn" data-settings-tab="branding">🏢 Corredora & Negocio</button>
+        <button type="button" class="settings-tab-btn" data-settings-tab="bots">🤖 Bots & IA</button>
+        <button type="button" class="settings-tab-btn" data-settings-tab="system">💾 Respaldos & Sistema</button>
+      </div>
+
+      <!-- PANEL 1: EMBUDO Y ETAPAS -->
+      <div class="settings-tab-panel" id="settingsPanel-pipeline">
+        <div class="card">
+          <div class="crm-page-head">
+            <div>
+              <h3>🏷️ Personalización del Embudo de Ventas (Pipeline)</h3>
+              <div class="hint">Agrega, renombra, reordena o cambia el color de las etapas de tu proceso de venta. Los cambios se sincronizan en vivo con el tablero Kanban y los filtros.</div>
+            </div>
+          </div>
+          
+          <div style="background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:16px;">
+            <strong style="font-size:13px; display:block; margin-bottom:8px;">➕ Agregar nueva etapa al embudo</strong>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <input type="text" id="newStageName" placeholder="Ej: Pre-evaluación Hipotecaria, Reserva..." style="flex:2 1 200px;">
+              <select id="newStageColor" style="flex:1 1 120px;">
+                <option value="var(--green)">🟢 Verde</option>
+                <option value="var(--amber)">🟠 Ámbar</option>
+                <option value="#5a9bd9">🔵 Azul</option>
+                <option value="#9b7edb">🟣 Morado</option>
+                <option value="var(--gold)">🟡 Dorado</option>
+                <option value="var(--danger)">🔴 Rojo</option>
+                <option value="var(--text-dim)">⚪ Gris</option>
+              </select>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; cursor:pointer;">
+                <input type="checkbox" id="newStageIsClosed"> ¿Es etapa de cierre? (Vendido / Pérdida)
+              </label>
+              <button type="button" class="primary small" id="btnAddNewStage">+ Agregar Etapa</button>
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <strong style="font-size:13px;">Etapas activas del embudo (en orden de avance):</strong>
+              <button type="button" class="ghost small" id="btnResetDefaultStages" style="font-size:11px;">↺ Restaurar etapas originales</button>
+            </div>
+            <div id="settingsStagesList" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+            <button type="button" class="primary" id="btnSaveStagesChanges">💾 Guardar cambios del Embudo</button>
+          </div>
         </div>
       </div>
-      <div class="card">
-        <div class="crm-page-head"><div><h3>🔌 Centro de integraciones</h3><div class="hint">Estado de los canales conectados a este CRM.</div></div></div>
-        <div class="kommo-integrations-grid">
-          <div class="kommo-integration-card"><div class="ic-icon">🌐</div><div class="ic-name">Portales inmobiliarios</div><span class="ic-status ok">Instalado</span></div>
-          <div class="kommo-integration-card"><div class="ic-icon">📱</div><div class="ic-name">WhatsApp</div><span class="ic-status locked" id="icStatusWhatsApp">Instalar</span></div>
-          <div class="kommo-integration-card"><div class="ic-icon">📸</div><div class="ic-name">Instagram</div><span class="ic-status locked">Instalar</span></div>
-          <div class="kommo-integration-card"><div class="ic-icon">📘</div><div class="ic-name">Facebook</div><span class="ic-status locked">Instalar</span></div>
-          <div class="kommo-integration-card"><div class="ic-icon">✉️</div><div class="ic-name">Correo</div><span class="ic-status locked" id="icStatusEmail">Instalar</span></div>
+
+      <!-- PANEL 2: CAMPOS PERSONALIZADOS -->
+      <div class="settings-tab-panel" id="settingsPanel-custom-fields" style="display:none;">
+        <div class="card">
+          <div class="crm-page-head">
+            <div>
+              <h3>📋 Campos Personalizados (Sin tocar código)</h3>
+              <div class="hint">Crea campos adicionales para registrar datos únicos de tus clientes (ej: RUT, presupuesto UF, banco, comuna) o de tus propiedades. Aparecerán automáticamente en los formularios de registro.</div>
+            </div>
+          </div>
+
+          <!-- FORMULARIO CREAR CAMPO -->
+          <div style="background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:16px;">
+            <strong style="font-size:13px; display:block; margin-bottom:10px;">➕ Crear nuevo campo personalizado</strong>
+            <div class="row" style="margin-bottom:10px; gap:10px;">
+              <div class="field" style="flex:2 1 200px;">
+                <label>Nombre del campo (Etiqueta)</label>
+                <input type="text" id="newCfLabel" placeholder="Ej: RUT del Cliente, Comuna de búsqueda...">
+              </div>
+              <div class="field" style="flex:1 1 140px;">
+                <label>Tipo de dato</label>
+                <select id="newCfType">
+                  <option value="text">Texto simple</option>
+                  <option value="number">Número / Monto</option>
+                  <option value="date">Fecha</option>
+                  <option value="select">Lista desplegable (Opciones)</option>
+                </select>
+              </div>
+              <div class="field" style="flex:1 1 140px;">
+                <label>¿Dónde se utilizará?</label>
+                <select id="newCfTarget">
+                  <option value="lead">Ficha del Contacto (Cliente)</option>
+                  <option value="property">Ficha de la Propiedad</option>
+                </select>
+              </div>
+            </div>
+            <div class="field" id="newCfOptionsRow" style="display:none; margin-bottom:10px;">
+              <label>Opciones para la lista (separadas por coma)</label>
+              <input type="text" id="newCfOptions" placeholder="Ej: Banco Estado, Banco de Chile, Santander, BCI, Itaú">
+            </div>
+            <div style="display:flex; justify-content:flex-end;">
+              <button type="button" class="primary small" id="btnAddNewCustomField">+ Crear Campo</button>
+            </div>
+          </div>
+
+          <!-- LISTA DE CAMPOS EXISTENTES -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <strong style="font-size:13px;">Campos personalizados activos:</strong>
+            <div class="crm-subnav" style="margin:0; padding:2px;">
+              <button type="button" class="cf-filter-btn active" data-cf-filter="all" style="padding:4px 10px; font-size:11px;">Todos</button>
+              <button type="button" class="cf-filter-btn" data-cf-filter="lead" style="padding:4px 10px; font-size:11px;">Solo Contactos</button>
+              <button type="button" class="cf-filter-btn" data-cf-filter="property" style="padding:4px 10px; font-size:11px;">Solo Propiedades</button>
+            </div>
+          </div>
+          <div id="settingsCustomFieldsList" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px;"></div>
         </div>
-        <div style="margin-top:10px;"><a class="ke-link" data-app-view-link="crm-sources">Configurar filtros de correo →</a></div>
       </div>
-      <div class="card">
-        <div class="crm-page-head"><div><h3>💾 Copias de seguridad</h3><div class="hint">Respalda o restaura toda la información del CRM.</div></div></div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="primary" id="btnExportCrmXlsx">📗 Respaldo explicativo (Excel)</button>
-          <button class="ghost small" id="btnExport">⬇️ Exportar respaldo (JSON)</button>
-          <button class="ghost small" id="btnImportTrigger">⬆️ Importar respaldo (JSON)</button>
-          <input type="file" id="importFile" accept="application/json" style="display:none;">
+
+      <!-- PANEL 3: CANALES Y PORTALES -->
+      <div class="settings-tab-panel" id="settingsPanel-channels" style="display:none;">
+        <div class="card">
+          <div class="crm-page-head">
+            <div>
+              <h3>📢 Canales y Portales de Captura</h3>
+              <div class="hint">Configura las fuentes de donde llegan tus clientes potenciales. Los canales activos aparecen en los selectores del CRM y en el reporte de efectividad comercial.</div>
+            </div>
+          </div>
+
+          <div style="background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:16px;">
+            <strong style="font-size:13px; display:block; margin-bottom:8px;">➕ Agregar nuevo canal de captura</strong>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <input type="text" id="newChannelInput" placeholder="Ej: TikTok Ads, Letrero en Fachada, Radio, Canje..." style="flex:1 1 220px;">
+              <button type="button" class="primary small" id="btnAddChannelBtn">+ Agregar Canal</button>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <strong style="font-size:13px;">Canales activos hoy:</strong>
+            <button type="button" class="ghost small" id="btnResetChannelsBtn" style="font-size:11px;">↺ Restaurar canales originales</button>
+          </div>
+          <div id="settingsChannelsList" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;"></div>
+        </div>
+      </div>
+
+      <!-- PANEL 4: TIEMPOS SLA Y REGLAS -->
+      <div class="settings-tab-panel" id="settingsPanel-sla" style="display:none;">
+        <div class="card">
+          <div class="crm-page-head">
+            <div>
+              <h3>⏱️ Tiempos SLA y Reglas de Velocidad de Respuesta</h3>
+              <div class="hint">Ajusta los minutos del semáforo de contacto rápido y los días para considerar un prospecto como "Lead Frío" en las secuencias drip.</div>
+            </div>
+          </div>
+
+          <div class="row" style="gap:14px; margin-bottom:16px;">
+            <div class="field" style="flex:1 1 180px;">
+              <label>🟢 Contacto Óptimo (Verde)</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:12px; color:var(--text-dim);">&lt;</span>
+                <input type="number" id="cfgSlaOptimal" min="1" max="60" value="5" style="width:70px;">
+                <span style="font-size:12px; color:var(--text-dim);">minutos</span>
+              </div>
+            </div>
+            <div class="field" style="flex:1 1 180px;">
+              <label>🟡 Tiempo en Alerta (Amarillo)</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:12px; color:var(--text-dim);">&lt;</span>
+                <input type="number" id="cfgSlaWarning" min="5" max="120" value="15" style="width:70px;">
+                <span style="font-size:12px; color:var(--text-dim);">minutos</span>
+              </div>
+            </div>
+            <div class="field" style="flex:1 1 180px;">
+              <label>🔴 Tiempo Crítico Vencido (Rojo)</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:12px; color:var(--text-dim);">&gt;</span>
+                <input type="number" id="cfgSlaCritical" min="10" max="240" value="30" style="width:70px;">
+                <span style="font-size:12px; color:var(--text-dim);">minutos</span>
+              </div>
+            </div>
+            <div class="field" style="flex:1 1 180px;">
+              <label>❄️ Días para Lead Frío (Drip)</label>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:12px; color:var(--text-dim);">&gt;</span>
+                <input type="number" id="cfgSlaColdDays" min="1" max="60" value="7" style="width:70px;">
+                <span style="font-size:12px; color:var(--text-dim);">días sin contacto</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-bottom:16px;">
+            <label>💬 Plantilla del Auto-Saludo para Prospectos Nuevos</label>
+            <div class="hint" style="margin-bottom:6px;">Variables disponibles: <code>{{nombre}}</code>, <code>{{propiedad}}</code>, <code>{{portal}}</code></div>
+            <textarea id="cfgAutoGreetingTemplate" rows="3" placeholder="Hola {{nombre}}, recibimos tu consulta en {{portal}} por la propiedad &quot;{{propiedad}}&quot;..."></textarea>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end;">
+            <button type="button" class="primary" id="btnSaveSlaSettings">💾 Guardar Reglas y Tiempos SLA</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 5: CORREDORA Y NEGOCIO (BRANDING) -->
+      <div class="settings-tab-panel" id="settingsPanel-branding" style="display:none;">
+        <div class="card">
+          <div class="crm-page-head">
+            <div>
+              <h3>🏢 Identidad de la Corredora y Parámetros Comerciales</h3>
+              <div class="hint">Configura el nombre de tu empresa, moneda predeterminada, comisiones y datos de contacto oficiales.</div>
+            </div>
+          </div>
+
+          <div class="row" style="gap:12px; margin-bottom:12px;">
+            <div class="field" style="flex:2 1 240px;">
+              <label>Nombre de la Empresa / Corredora</label>
+              <input type="text" id="cfgCompanyName" value="Cima Propiedades" placeholder="Ej: Cima Propiedades">
+            </div>
+            <div class="field" style="flex:1 1 180px;">
+              <label>Teléfono / WhatsApp Central</label>
+              <input type="text" id="cfgCompanyPhone" placeholder="+56 9 1234 5678">
+            </div>
+            <div class="field" style="flex:1 1 200px;">
+              <label>Correo Electrónico Oficial</label>
+              <input type="email" id="cfgCompanyEmail" placeholder="contacto@cimapropiedades.cl">
+            </div>
+          </div>
+
+          <div class="row" style="gap:12px; margin-bottom:16px;">
+            <div class="field" style="flex:1 1 160px;">
+              <label>Moneda Principal</label>
+              <select id="cfgDefaultCurrency">
+                <option value="CLP">Pesos Chilenos (CLP $)</option>
+                <option value="UF">Unidades de Fomento (UF)</option>
+              </select>
+            </div>
+            <div class="field" style="flex:1 1 160px;">
+              <label>Comisión Estándar Venta (%)</label>
+              <input type="number" step="0.1" id="cfgDefaultCommission" value="2.0">
+            </div>
+            <div class="field" style="flex:2 1 240px;">
+              <label>Ciudad / Región Principal</label>
+              <input type="text" id="cfgCompanyRegion" value="Concepción y San Pedro de la Paz, Bío Bío">
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end;">
+            <button type="button" class="primary" id="btnSaveBrandingSettings">💾 Guardar Datos de la Corredora</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 6: BOTS E INTELIGENCIA ARTIFICIAL -->
+      <div class="settings-tab-panel" id="settingsPanel-bots" style="display:none;">
+        <div class="card">
+          <div class="crm-page-head">
+            <div>
+              <h3>🤖 Configuración de Bots y Asistente Cima AI</h3>
+              <div class="hint">Modifica los mensajes de los bots y dale instrucciones personalizadas a la Inteligencia Artificial sin alterar el código fuente.</div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:16px;">
+            <div class="field">
+              <label>🤖 Mensaje de Bienvenida del Bot Cualificador</label>
+              <textarea id="cfgBotWelcomeMsg" rows="2" placeholder="¡Hola! Gracias por comunicarte con nosotros. ¿Buscas comprar o arrendar?"></textarea>
+            </div>
+            <div class="field">
+              <label>🏦 Pregunta del Bot Calificador Hipotecario</label>
+              <textarea id="cfgBotMortgageMsg" rows="2" placeholder="¿Cuentas con crédito hipotecario preaprobado o deseas que te ayudemos a evaluarlo con nuestros bancos aliados?"></textarea>
+            </div>
+            <div class="field">
+              <label>📅 Mensaje del Bot Agendador de Visitas</label>
+              <textarea id="cfgBotVisitMsg" rows="2" placeholder="Perfecto. Disponemos de visitas de lunes a sábado. ¿Qué horario te acomoda más?"></textarea>
+            </div>
+            <div class="field">
+              <label>✨ Instrucciones para Cima AI (Prompt de Personalidad y Metodología)</label>
+              <div class="hint" style="margin-bottom:6px;">Define cómo debe comportarse el asistente al redactar o sugerir respuestas.</div>
+              <textarea id="cfgAiSystemPrompt" rows="4" placeholder="Eres Cima AI, asesor inmobiliario de Cima Propiedades. Responde siempre con profesionalismo, enfoque en agendamiento y asesoría financiera personalizada."></textarea>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end;">
+            <button type="button" class="primary" id="btnSaveBotsSettings">💾 Guardar Ajustes de Bots e IA</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 7: RESPALDOS Y SISTEMA -->
+      <div class="settings-tab-panel" id="settingsPanel-system" style="display:none;">
+        <div class="card">
+          <div class="crm-page-head"><div><h3>👤 Perfil</h3><div class="hint">Sesión actual y estado de la organización.</div></div></div>
+          <div class="stat-grid">
+            <div class="stat-box"><div class="stat-value" id="settingsUserName">—</div><div class="stat-label">Usuario conectado</div></div>
+            <div class="stat-box"><div class="stat-value" id="settingsSyncState">—</div><div class="stat-label">Estado de sincronización</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="crm-page-head"><div><h3>🔌 Centro de integraciones</h3><div class="hint">Estado de los canales conectados a este CRM.</div></div></div>
+          <div class="kommo-integrations-grid">
+            <div class="kommo-integration-card"><div class="ic-icon">🌐</div><div class="ic-name">Portales inmobiliarios</div><span class="ic-status ok">Instalado</span></div>
+            <div class="kommo-integration-card"><div class="ic-icon">📱</div><div class="ic-name">WhatsApp</div><span class="ic-status locked" id="icStatusWhatsApp">Instalar</span></div>
+            <div class="kommo-integration-card"><div class="ic-icon">📸</div><div class="ic-name">Instagram</div><span class="ic-status locked">Instalar</span></div>
+            <div class="kommo-integration-card"><div class="ic-icon">📘</div><div class="ic-name">Facebook</div><span class="ic-status locked">Instalar</span></div>
+            <div class="kommo-integration-card"><div class="ic-icon">✉️</div><div class="ic-name">Correo</div><span class="ic-status locked" id="icStatusEmail">Instalar</span></div>
+          </div>
+          <div style="margin-top:10px;"><a class="ke-link" data-app-view-link="crm-sources">Configurar filtros de correo →</a></div>
+        </div>
+        <div class="card">
+          <div class="crm-page-head"><div><h3>💾 Copias de seguridad</h3><div class="hint">Respalda o restaura toda la información del CRM.</div></div></div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="primary" id="btnExportCrmXlsx">📗 Respaldo explicativo (Excel)</button>
+            <button class="ghost small" id="btnExport">⬇️ Exportar respaldo (JSON)</button>
+            <button class="ghost small" id="btnImportTrigger">⬆️ Importar respaldo (JSON)</button>
+            <input type="file" id="importFile" accept="application/json" style="display:none;">
+          </div>
         </div>
       </div>
     </div>
@@ -2422,6 +2814,21 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
 </div>
 
 <!-- VISOR DE CORREO COMPLETO (para Enviados / Eliminados) -->
+<!-- MODAL PARA VER EL CONTENIDO COMPLETO DEL CORREO Y COMPROBAR EL LINK -->
+<div class="cima-modal-overlay" id="leadEmailDetailModal">
+  <div class="cima-modal" style="max-width:680px; max-height:85vh; display:flex; flex-direction:column;">
+    <div class="cima-modal-head">
+      <h3 id="leadEmailDetailModalTitle">✉️ Contenido del Correo del Portal</h3>
+      <button type="button" class="cima-modal-close" onclick="closeCimaModal('leadEmailDetailModal')">✕ Cerrar</button>
+    </div>
+    <div class="cima-modal-body" id="leadEmailDetailModalBody" style="overflow-y:auto; flex:1;"></div>
+    <div class="cima-modal-foot" id="leadEmailDetailModalFoot" style="display:flex; justify-content:flex-end; gap:8px; padding:12px 18px; border-top:1px solid var(--border);">
+      <button type="button" class="ghost small" onclick="closeCimaModal('leadEmailDetailModal')">Cerrar</button>
+      <button type="button" class="primary small" id="btnModalEditLeadNow">✏️ Editar directamente este contacto</button>
+    </div>
+  </div>
+</div>
+
 <div class="cima-modal-overlay" id="emailViewModalOverlay">
   <div class="cima-modal">
     <div class="cima-modal-head">
@@ -3101,24 +3508,41 @@ const DEFAULT_TEMPLATES_FACEBOOK = [
 const DEFAULT_PLATFORMS = ["Yapo", "Facebook Marketplace", "Proppit", "TocToc"];
 const DEFAULT_FOLDERS = ["Arriendos", "Ventas", "Parcelas y Terrenos"];
 
-// Etapas del seguimiento comercial.
-const STAGE_OPTIONS = [
-  'Primer Contacto',
-  'Seguimiento',
-  'Envio documentos',
-  'Se agendo visita',
-  'Se realizo visita',
-  'se envio carta compra venta',
-  'se firmo carta compra venta',
-  'Se firmo Promesa',
-  'Vendido',
-  'No respondio',
-  'No compro',
-  'Desistió',
-  'No califica'
+// Etapas del seguimiento comercial y motor de personalización dinámica.
+const DEFAULT_STAGE_CONFIG = [
+  {name:'Primer Contacto', color:'var(--green)', isClosed:false},
+  {name:'Seguimiento', color:'var(--amber)', isClosed:false},
+  {name:'Envio documentos', color:'var(--amber)', isClosed:false},
+  {name:'Se agendo visita', color:'#5a9bd9', isClosed:false},
+  {name:'Se realizo visita', color:'#5a9bd9', isClosed:false},
+  {name:'se envio carta compra venta', color:'#9b7edb', isClosed:false},
+  {name:'se firmo carta compra venta', color:'#9b7edb', isClosed:false},
+  {name:'Se firmo Promesa', color:'#9b7edb', isClosed:false},
+  {name:'Vendido', color:'var(--green)', isClosed:true},
+  {name:'No respondio', color:'var(--text-dim)', isClosed:true},
+  {name:'No compro', color:'var(--text-dim)', isClosed:true},
+  {name:'Desistió', color:'var(--text-dim)', isClosed:true},
+  {name:'No califica', color:'var(--text-dim)', isClosed:true}
 ];
-const CLOSED_STAGES = new Set(['Vendido','No respondio','No compro','Desistió','No califica']);
-function stageIsClosed(stage){ return CLOSED_STAGES.has(stage); }
+
+let STAGE_OPTIONS = DEFAULT_STAGE_CONFIG.map(s => s.name);
+let CLOSED_STAGES = new Set(DEFAULT_STAGE_CONFIG.filter(s => s.isClosed).map(s => s.name));
+
+function getCustomStages() {
+  if (state.settings && Array.isArray(state.settings.stages) && state.settings.stages.length) {
+    return state.settings.stages;
+  }
+  return DEFAULT_STAGE_CONFIG;
+}
+
+function stageIsClosed(stage) {
+  if (state.settings && Array.isArray(state.settings.stages)) {
+    const found = state.settings.stages.find(s => (typeof s === 'string' ? s : s.name) === stage);
+    if (found && typeof found === 'object' && found.isClosed !== undefined) return !!found.isClosed;
+  }
+  return CLOSED_STAGES.has(stage);
+}
+
 function stageInfo(stage){
   const map={
     'Primer Contacto':{selCls:'sel-primer',badgeCls:'primer',icon:'🟢'},
@@ -3135,7 +3559,30 @@ function stageInfo(stage){
     'Desistió':{selCls:'sel-desistio',badgeCls:'desistio',icon:'🔴'},
     'No califica':{selCls:'sel-no-califica',badgeCls:'no-califica',icon:'⚫'}
   };
-  return map[stage] || map['Primer Contacto'];
+  if (map[stage]) return map[stage];
+  const isClosed = stageIsClosed(stage);
+  return {
+    selCls: isClosed ? 'sel-no-responde' : 'sel-agenda',
+    badgeCls: isClosed ? 'no-responde' : 'agenda',
+    icon: isClosed ? '🔒' : '📌'
+  };
+}
+
+function refreshStageOptions() {
+  const stages = getCustomStages();
+  STAGE_OPTIONS = stages.map(s => typeof s === 'string' ? s : s.name);
+  CLOSED_STAGES = new Set(stages.filter(s => typeof s === 'object' && s.isClosed).map(s => s.name));
+  
+  const stageSel = document.getElementById('leadStage');
+  if (stageSel) {
+    const current = stageSel.value;
+    stageSel.innerHTML = STAGE_OPTIONS.map(s => `<option value="${escapeAttr(s)}" ${s === current ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
+  }
+  const filterSel = document.getElementById('crmAllLeadsStageFilter');
+  if (filterSel) {
+    const current = filterSel.value;
+    filterSel.innerHTML = '<option value="all">Todas las etapas</option>' + STAGE_OPTIONS.map(s => `<option value="${escapeAttr(s)}" ${s === current ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
+  }
 }
 
 
@@ -5895,6 +6342,9 @@ document.getElementById('btnAddLead').addEventListener('click', ()=>{
   const nextContact=document.getElementById('leadNextContact').value||addDays(date,7);
   const stage=document.getElementById('leadStage').value||'Primer Contacto';
   const notes=document.getElementById('leadNotes').value.trim();
+  const email=(document.getElementById('leadEmail')?.value||'').trim();
+  const customFields = collectLeadCustomFields();
+  const portalLink=(document.getElementById('leadPortalLink')?.value||'').trim();
   const conversation=document.getElementById('leadConversation').value;
   const tags=(document.getElementById('leadTags')?.value||'').split(',').map(t=>t.trim()).filter(Boolean);
   if(!name){showToast('Escribe el nombre del cliente');return;}
@@ -5908,7 +6358,7 @@ document.getElementById('btnAddLead').addEventListener('click', ()=>{
   if(crmEditingLeadId){
     const lead=state.leads.find(l=>l.id===crmEditingLeadId);
     if(!lead){showToast('No se encontró el contacto que estabas editando.');resetLeadEditor();return;}
-    lead.name=name; lead.channel=channel; lead.phone=phone; lead.operation=operation; lead.property=property; lead.propertyId=prop?.id||null; lead.priceLabel=priceLabel||null;
+    lead.name=name; lead.channel=channel; lead.phone=phone; lead.email=email; lead.portalLink=portalLink; lead.customFields=customFields; lead.operation=operation; lead.property=property; lead.propertyId=prop?.id||null; lead.priceLabel=priceLabel||null; if(lead.channel==='Correo'||lead.channel==='TocToc'||lead.channel==='Yapo') lead.emailReviewed=true;
     lead.notes=notes; lead.stage=stage; lead.status=stageIsClosed(stage)?'Cerrado':'Activo'; lead.lastContact=date; lead.nextContact=nextContact;
     lead.conversation=conversation; lead.tags=tags; touchLead(lead);
     saveState(); renderCRM(); renderEstadisticas(); logActivity(`Contacto editado en CRM: ${name} (Interés: ${property||'General'}).`);
@@ -5916,14 +6366,29 @@ document.getElementById('btnAddLead').addEventListener('click', ()=>{
     resetLeadEditor();
     goToAppView(leadEditorReturnView || 'crm-board');
   } else {
-    state.leads.unshift({id:uid(),name,channel,phone,operation,property,propertyId:prop?.id||null,priceLabel:priceLabel||null,notes,stage,status:stageIsClosed(stage)?'Cerrado':'Activo',firstContact:date,lastContact:date,nextContact,conversation,tags,origin:'manual',updatedAt:Date.now()});
+    state.leads.unshift({id:uid(),name,channel,phone,email,portalLink,customFields,operation,property,propertyId:prop?.id||null,priceLabel:priceLabel||null,notes,stage,status:stageIsClosed(stage)?'Cerrado':'Activo',firstContact:date,lastContact:date,nextContact,conversation,tags,origin:'manual',emailReviewed:true,updatedAt:Date.now()});
     saveState();renderCRM();renderEstadisticas();showToast('Contacto registrado.');
     logActivity(`Nuevo contacto registrado en CRM: ${name} (Interés: ${property||'General'}).`);
     triggerAutoReplyIfNew(state.leads[0]);
     goToCRMView('crm-board');
   }
-  ['leadName','leadPhone','leadProperty','leadPriceLabel','leadNotes','leadConversation','leadTags'].forEach(id=>document.getElementById(id).value='');
+  ['leadName','leadPhone','leadEmail','leadPortalLink','leadProperty','leadPriceLabel','leadNotes','leadConversation','leadTags'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('leadDate').value=todayISO();document.getElementById('leadNextContact').value=addDays(todayISO(),7);document.getElementById('leadStage').value='Primer Contacto';
+});
+
+
+// Actualizar botón de comprobar enlace en portal mientras se escribe o pega
+document.getElementById('leadPortalLink')?.addEventListener('input', (e)=>{
+  const url = (e.target.value || '').trim();
+  const btn = document.getElementById('btnOpenPortalLink');
+  if (btn) {
+    if (url.startsWith('http')) {
+      btn.href = url;
+      btn.style.display = 'inline-flex';
+    } else {
+      btn.style.display = 'none';
+    }
+  }
 });
 
 document.getElementById('btnCancelLeadEdit')?.addEventListener('click',()=>{
@@ -6141,7 +6606,186 @@ function renderLeadCard(lead, compact=false){
   </div>`;
 }
 let crmEditingLeadId=null;
+
+/* =========================================================================
+   COMPROBACIÓN DE CORREO DEL PORTAL Y DETECCIÓN DE ENLACES (V3.1)
+========================================================================= */
+
+function parseLeadEmailDetails(lead) {
+  if (!lead) return {};
+  const text = (lead.emailRaw || lead.notes || '') + '\n' + (lead.conversation || '');
+  
+  // 1. Extraer correo del cliente
+  let clientEmail = lead.email || null;
+  if (!clientEmail) {
+    const emailMatch1 = text.match(/(?:correo del cliente|email|correo):\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+    if (emailMatch1) clientEmail = emailMatch1[1].trim();
+    else {
+      const allEmails = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
+      const valid = allEmails.find(e => !/(?:no-responder|noreply|donotreply|notificaciones|info@toctoc|soporte)/i.test(e));
+      if (valid) clientEmail = valid;
+    }
+  }
+
+  // 2. Extraer Enlace del Portal
+  let portalLink = lead.portalLink || null;
+  if (!portalLink) {
+    const urls = text.match(/https?:\/\/[^\s<>"')\]]+/g) || [];
+    const bestUrl = urls.find(u => /(?:toctoc\.com|yapo\.cl|portalinmobiliario\.com|proppit\.com|emol\.com)/i.test(u))
+                 || urls.find(u => /(?:sendgrid\.net|ct\.sendgrid)/i.test(u))
+                 || urls[0];
+    if (bestUrl) portalLink = bestUrl;
+
+    if (!portalLink) {
+      const tokenMatch = text.match(/(2FkaDit[A-Za-z0-9_\-]+|u001\.[A-Za-z0-9_\-]+)/);
+      if (tokenMatch) {
+        portalLink = 'https://click.toctoc.com/ls/click?upn=' + tokenMatch[1];
+      }
+    }
+  }
+
+  // 3. Detectar si las notas tienen basura de rastreo para limpiarla
+  let hasTrackingGarbage = false;
+  let cleanNotes = lead.notes || '';
+  if (/2FkaDit[A-Za-z0-9_\-]+/.test(cleanNotes) || /u001\.[A-Za-z0-9_\-]+/.test(cleanNotes) || /https?:\/\/u\d+\.ct\.sendgrid\.net/.test(cleanNotes)) {
+    hasTrackingGarbage = true;
+    cleanNotes = cleanNotes.replace(/2FkaDit[A-Za-z0-9_\-]+/g, '')
+                           .replace(/u001\.[A-Za-z0-9_\-]+/g, '')
+                           .replace(/https?:\/\/\S+/g, '')
+                           .replace(/\n{3,}/g, '\n\n')
+                           .trim();
+  }
+
+  // 4. Asunto y Mensaje del cliente
+  const subjectMatch = text.match(/Asunto:\s*(.+)/i);
+  const subject = lead.emailSubject || (subjectMatch ? subjectMatch[1].trim() : (lead.property ? `Solicitud por ${lead.property}` : 'Consulta de portal'));
+  
+  let clientMessage = '';
+  const msgMatch = text.match(/(?:mensaje del cliente|mensaje|comentario):\s*([\s\S]+?)(?=\n[A-Z][a-z]+:|$)/i);
+  if (msgMatch) {
+    clientMessage = msgMatch[1].trim();
+  } else if (cleanNotes && !cleanNotes.startsWith('Detectado por IA')) {
+    clientMessage = cleanNotes;
+  }
+
+  const hasEmailData = !!(lead.email || clientEmail || portalLink || lead.channel === 'Correo' || lead.channel === 'TocToc' || lead.channel === 'Yapo' || lead.channel === 'Proppit');
+
+  return {
+    email: clientEmail,
+    portalLink,
+    subject,
+    clientMessage,
+    cleanNotes,
+    hasTrackingGarbage,
+    hasEmailData,
+    rawText: (lead.emailRaw || lead.notes || text).trim()
+  };
+}
+
+function openLeadEditorById(leadId) {
+  const lead = (state.leads || []).find(l => l.id === leadId);
+  if (lead) {
+    document.getElementById('emailAlertOverlay')?.classList.remove('show');
+    closeCimaModal('leadEmailDetailModal');
+    openLeadEditor(lead);
+  }
+}
+
+function openLeadEmailDetailModalById(leadId) {
+  const lead = (state.leads || []).find(l => l.id === leadId);
+  if (lead) {
+    openLeadEmailDetailModal(lead);
+  }
+}
+
+function openLeadEmailDetailModal(lead) {
+  if (!lead) return;
+  const modal = document.getElementById('leadEmailDetailModal');
+  const title = document.getElementById('leadEmailDetailModalTitle');
+  const body = document.getElementById('leadEmailDetailModalBody');
+  const editBtn = document.getElementById('btnModalEditLeadNow');
+  if (!modal || !body) return;
+
+  const info = parseLeadEmailDetails(lead);
+  const channel = lead.channel || 'Portal';
+
+  if (title) title.innerHTML = `✉️ Correo de <strong>${escapeHtml(channel)}</strong> — ${escapeHtml(lead.name || 'Contacto')}`;
+
+  const waDigits = String(lead.phone || '').replace(/\D/g, '');
+  const waUrl = waDigits ? `https://web.whatsapp.com/send?phone=${waDigits}&text=${encodeURIComponent(`Hola ${lead.name || ''}, vimos tu consulta en ${channel} por la propiedad "${lead.property || ''}". ¿En qué podemos ayudarte? — Cima Propiedades`)}` : null;
+
+  body.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:8px;">
+      <div>
+        <span class="badge" style="background:var(--gold); color:#000; font-weight:700; padding:2px 8px; border-radius:4px; font-size:12px;">${escapeHtml(channel)}</span>
+        <span style="font-size:13px; color:var(--text-dim); margin-left:8px;">Fecha: ${lead.firstContact || todayISO()}</span>
+        <h4 style="margin:6px 0 2px 0; font-size:15px; color:var(--text);">${escapeHtml(info.subject || 'Solicitud de contacto')}</h4>
+      </div>
+      <div>
+        ${waUrl ? `<a href="${safeUrl(waUrl)}" target="_blank" rel="noopener" class="primary small" style="text-decoration:none;">💬 WhatsApp Web</a>` : ''}
+      </div>
+    </div>
+
+    <!-- FICHA RESUMEN DEL CONTACTO -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:14px;">
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:6px; padding:10px;">
+        <span style="font-size:11px; text-transform:uppercase; color:var(--text-dim); display:block;">👤 Interesado(a)</span>
+        <strong style="font-size:14px;">${escapeHtml(lead.name || 'No informado')}</strong>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:2px;">📞 ${escapeHtml(lead.phone || 'Sin teléfono')}</div>
+        <div style="font-size:12px; color:var(--text-dim);">✉️ ${escapeHtml(info.email || lead.email || 'Sin correo directo')}</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:6px; padding:10px;">
+        <span style="font-size:11px; text-transform:uppercase; color:var(--text-dim); display:block;">🏠 Propiedad Consultada</span>
+        <strong style="font-size:14px; color:var(--gold);">${escapeHtml(lead.property || 'General')}</strong>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:2px;">Operación: ${escapeHtml(lead.operation || 'Venta')} ${lead.priceLabel ? '· 💰 ' + escapeHtml(lead.priceLabel) : ''}</div>
+      </div>
+    </div>
+
+    <!-- ENLACE DE COMPROBACIÓN DEL PORTAL -->
+    <div style="background:rgba(212,175,55,0.1); border:1.5px solid var(--gold); border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div>
+          <strong style="font-size:13.5px; color:var(--gold); display:block;">🔗 Enlace a la Publicación en ${escapeHtml(channel)}</strong>
+          <span style="font-size:12px; color:var(--text-dim);">${info.portalLink ? 'Enlace detectado en el correo. Haz clic para comprobar la publicación.' : 'No se detectó un enlace directo en este correo.'}</span>
+        </div>
+        ${info.portalLink ? `
+          <a href="${safeUrl(info.portalLink)}" target="_blank" rel="noopener" class="primary small" style="text-decoration:none; white-space:nowrap; padding:6px 14px; font-weight:700;">
+            🌐 Comprobar aviso en ${escapeHtml(channel)} ↗
+          </a>
+        ` : ''}
+      </div>
+      ${info.portalLink ? `
+        <div style="margin-top:8px; padding:6px 8px; background:rgba(0,0,0,0.25); border-radius:4px; font-size:11.5px; word-break:break-all; color:var(--text-dim);">
+          ${escapeHtml(info.portalLink)}
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- MENSAJE ESCRITO POR EL CLIENTE -->
+    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+      <strong style="font-size:13px; display:block; margin-bottom:6px;">💬 Mensaje / Consulta del Cliente:</strong>
+      <div style="font-size:13.5px; line-height:1.5; color:var(--text); white-space:pre-wrap;">${escapeHtml(info.clientMessage || '(El cliente no incluyó un mensaje de texto adicional en el formulario del portal)')}</div>
+    </div>
+
+    <!-- CONTENIDO ORIGINAL SIN PROCESAR -->
+    <details style="margin-top:8px; border-top:1px dashed var(--border); padding-top:10px;">
+      <summary style="cursor:pointer; font-size:12px; color:var(--text-dim); font-weight:600;">📄 Ver texto completo sin procesar del correo</summary>
+      <pre style="margin-top:8px; padding:10px; background:rgba(0,0,0,0.3); border-radius:6px; font-size:11px; max-height:180px; overflow-y:auto; white-space:pre-wrap; color:var(--text-dim);">${escapeHtml(info.rawText || 'Sin texto original almacenado')}</pre>
+    </details>
+  `;
+
+  if (editBtn) {
+    editBtn.onclick = () => {
+      closeCimaModal('leadEmailDetailModal');
+      openLeadEditor(lead);
+    };
+  }
+
+  modal.classList.add('active');
+}
+
 function resetLeadEditor(){
+  renderLeadCustomFieldsInputs(null);
   crmEditingLeadId=null;
   const btn=document.getElementById("btnAddLead"); if(btn){btn.textContent="+ Registrar contacto";}
   const cancel=document.getElementById("btnCancelLeadEdit"); if(cancel) cancel.style.display="none";
@@ -6150,6 +6794,10 @@ function resetLeadEditor(){
   const conv=document.getElementById("leadConversation"); if(conv) conv.value="";
   const convStatus=document.getElementById("leadConversationStatus"); if(convStatus) convStatus.textContent="";
   const archiveBtn=document.getElementById("btnToggleArchiveLead"); if(archiveBtn) archiveBtn.style.display="none";
+  const emailField=document.getElementById("leadEmail"); if(emailField) emailField.value="";
+  const portalLinkField=document.getElementById("leadPortalLink"); if(portalLinkField) portalLinkField.value="";
+  const sourceCard=document.getElementById("leadEmailSourceCard"); if(sourceCard) sourceCard.style.display="none";
+  const openLinkBtn=document.getElementById("btnOpenPortalLink"); if(openLinkBtn) openLinkBtn.style.display="none";
 }
 let leadEditorReturnView = 'crm-board';
 function openLeadEditor(lead){
@@ -6161,7 +6809,55 @@ function openLeadEditor(lead){
   document.querySelector('[data-add-mode="manual"]')?.click();
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v||'';};
   set('leadName',lead.name);set('leadPhone',lead.phone);set('leadChannel',lead.channel||'WhatsApp');set('leadOperation',lead.operation||'Venta');
-  set('leadProperty',lead.property);set('leadPriceLabel',lead.priceLabel);set('leadDate',lead.lastContact||lead.firstContact||todayISO());set('leadNextContact',lead.nextContact||addDays(lead.lastContact||todayISO(),7));set('leadStage',lead.stage||'Primer Contacto');set('leadNotes',lead.notes);
+  set('leadProperty',lead.property);set('leadPriceLabel',lead.priceLabel);set('leadDate',lead.lastContact||lead.firstContact||todayISO());set('leadNextContact',lead.nextContact||addDays(lead.lastContact||todayISO(),7));set('leadStage',lead.stage||'Primer Contacto');
+
+  // Parsear y limpiar detalles de correo/portal
+  const emailInfo = parseLeadEmailDetails(lead);
+  set('leadEmail', lead.email || emailInfo.email || '');
+  set('leadPortalLink', lead.portalLink || emailInfo.portalLink || '');
+
+  // Si las notas tenían un token de rastreo o basura (como 2FkaDit...), limpiarlas en el formulario
+  if (emailInfo.hasTrackingGarbage && emailInfo.cleanNotes !== undefined) {
+    set('leadNotes', emailInfo.cleanNotes);
+  } else {
+    set('leadNotes', lead.notes || '');
+  }
+
+  // Configurar tarjeta de comprobación de correo/portal
+  const sourceCard = document.getElementById('leadEmailSourceCard');
+  if (sourceCard) {
+    const isPortalOrEmail = lead.channel === 'Correo' || lead.channel === 'TocToc' || lead.channel === 'Yapo' || lead.channel === 'Proppit' || emailInfo.hasEmailData;
+    sourceCard.style.display = isPortalOrEmail ? 'block' : 'none';
+    const sourceTitle = document.getElementById('leadEmailSourceTitle');
+    if (sourceTitle) sourceTitle.innerHTML = `📩 <strong>Origen: Consulta desde ${escapeHtml(lead.channel || 'Portal')}</strong>`;
+
+    const openLinkBtn = document.getElementById('btnOpenPortalLink');
+    if (openLinkBtn) {
+      const pLink = lead.portalLink || emailInfo.portalLink;
+      if (pLink) {
+        openLinkBtn.href = pLink;
+        openLinkBtn.style.display = 'inline-flex';
+        openLinkBtn.textContent = '🌐 Comprobar aviso en ' + (lead.channel || 'Portal') + ' ↗';
+      } else {
+        openLinkBtn.style.display = 'none';
+      }
+    }
+
+    const viewEmailBtn = document.getElementById('btnViewLeadOriginalEmail');
+    if (viewEmailBtn) {
+      viewEmailBtn.onclick = () => openLeadEmailDetailModal(lead);
+    }
+
+    const cleanNotesBtn = document.getElementById('btnCleanLeadNotes');
+    if (cleanNotesBtn) {
+      cleanNotesBtn.onclick = () => {
+        const cleaned = parseLeadEmailDetails(lead).cleanNotes;
+        set('leadNotes', cleaned);
+        showToast('Notas depuradas: se eliminaron códigos de rastreo ✅');
+      };
+    }
+  }
+
   set('leadTags',(lead.tags||[]).join(', '));
   set('leadConversation',lead.conversation);
   const convStatus=document.getElementById('leadConversationStatus'); if(convStatus) convStatus.textContent=lead.conversation?`${lead.conversation.length.toLocaleString('es-CL')} caracteres guardados`:'';
@@ -6170,10 +6866,11 @@ function openLeadEditor(lead){
   const banner=document.getElementById('crmEditBanner'); if(banner) banner.classList.add('active');
   const bannerName=document.getElementById('crmEditBannerName'); if(bannerName) bannerName.textContent=lead.name||'Sin nombre';
   updateLeadPhoneVisibility();
+  renderLeadCustomFieldsInputs(lead);
   renderLeadMatchesInDrawer(lead);
   const archiveBtn=document.getElementById('btnToggleArchiveLead');
   if(archiveBtn){ archiveBtn.style.display='inline-block'; archiveBtn.textContent = lead.archived ? '↩️ Desarchivar' : '📥 Archivar'; }
-  showToast('Contacto cargado para editar. Cambia los datos y guarda los cambios.');
+  showToast('Contacto cargado para editar. Modifica cualquier campo y guarda los cambios ✅');
 }
 document.getElementById('btnToggleArchiveLead')?.addEventListener('click', ()=>{
   const lead=(state.leads||[]).find(l=>l.id===crmEditingLeadId); if(!lead) return;
@@ -6849,6 +7546,8 @@ function renderCRMGoalsReport(){
   });
 }
 function renderCRMSettingsSummary(){
+  initSettingsNavTabs();
+  renderActiveSettingsTab();
   const nameEl=document.getElementById('settingsUserName');
   if(nameEl) nameEl.textContent=(currentProfile&&(currentProfile.display_name||currentProfile.username))||currentAuthUser?.email||'—';
   const syncEl=document.getElementById('settingsSyncState');
@@ -8024,10 +8723,28 @@ function handleWhatsAppRealtimeChange(payload){
   } else {
     const idx = state.whatsappMessages.findIndex(m=>m.id===row.id);
     if(idx>=0) state.whatsappMessages[idx]=row; else state.whatsappMessages.push(row);
-    // limpia el mensaje "optimista" equivalente si ya llegó el real desde el servidor
     waPendingMessages = waPendingMessages.filter(p=>!(p.phone===row.phone && p.body===row.body));
+
+    // PROCESAR MENSAJE ENTRANTE EN TIEMPO REAL CON ENRUTAMIENTO POR ROL E IA
+    if(payload.eventType==='INSERT' && row.direction==='inbound'){
+      handleIncomingWhatsAppRealtimeMessage(row);
+    }
   }
   if(document.querySelector('.crm-view.active')?.id==='crm-inbox-chat') renderCRMInboxChat();
+  updateMobileUnreadBadge();
+}
+
+function updateMobileUnreadBadge(){
+  const badge = document.getElementById('mcBadgeChats');
+  if(!badge) return;
+  const convs = groupWhatsAppConversations();
+  const unreadCount = convs.filter(c => c.messages.length && c.messages[c.messages.length-1].direction==='inbound').length;
+  if(unreadCount > 0){
+    badge.textContent = unreadCount;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 function waMatchesLead(lead, digits){
@@ -8050,12 +8767,20 @@ function groupWhatsAppConversations(){
     if(!groups[p.digits]) groups[p.digits] = { digits:p.digits, phone:p.phone, messages:[] };
     groups[p.digits].messages.push(p);
   });
-  const list = Object.values(groups).map(g=>{
+  let list = Object.values(groups).map(g=>{
     g.messages.sort((a,b)=> new Date(a.created_at||0) - new Date(b.created_at||0));
     const last = g.messages[g.messages.length-1];
     const lead = findLeadByWaPhone(g.digits);
     return { ...g, lastAt: last ? (last.created_at||new Date().toISOString()) : null, lastText: last ? (last.body||'') : '', lead };
   });
+
+  // FILTRO POR ROL: Si es captadora, SOLO ve las conversaciones de sus clientes asignados
+  const myId = currentProfile?.id;
+  const isCaptadora = currentProfile && currentProfile.role === 'captadora';
+  if (isCaptadora && myId) {
+    list = list.filter(g => g.lead && (g.lead.assignedTo === myId || g.lead.assigned_to === myId));
+  }
+
   list.sort((a,b)=> new Date(b.lastAt||0) - new Date(a.lastAt||0));
   return list;
 }
@@ -9824,18 +10549,45 @@ async function scanInboxWithAiForPortalLeads(isBackground = false) {
         const ai = await aiResp.json();
 
         if (ai && (ai.name || ai.phone)) {
+          // 1. Extraer URLs del portal o SendGrid del texto completo del correo
+          const allUrls = text.match(/https?:\/\/[^\s<>"')\]]+/g) || [];
+          let detectedUrl = allUrls.find(u => /(?:toctoc\.com|yapo\.cl|portalinmobiliario\.com|proppit\.com)/i.test(u))
+                         || allUrls.find(u => /(?:sendgrid\.net|ct\.sendgrid)/i.test(u))
+                         || allUrls[0] || null;
+          if (!detectedUrl) {
+            const tokM = text.match(/(2FkaDit[A-Za-z0-9_\-]+|u001\.[A-Za-z0-9_\-]+)/);
+            if (tokM) detectedUrl = 'https://click.toctoc.com/ls/click?upn=' + tokM[1];
+          }
+
+          // 2. Extraer correo directo del cliente
+          let clientEmail = ai.email || null;
+          if (!clientEmail) {
+            const emMatch = text.match(/(?:correo del cliente|email|correo):\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+            if (emMatch) clientEmail = emMatch[1].trim();
+          }
+
+          // 3. Generar notas limpias sin tokens de rastreo
+          let cleanNotes = `Detectado por IA desde correo portal.\nAsunto: ${m.subject}`;
+          if (ai.comment || ai.message || ai.notes) {
+            cleanNotes += `\nMensaje del cliente: ${ai.comment || ai.message || ai.notes}`;
+          }
+
           // Verificar duplicado
           const existing = (state.leads || []).find(l => (ai.phone && l.phone && l.phone.includes(ai.phone.slice(-8))) || (ai.name && l.name && l.name.toLowerCase() === ai.name.toLowerCase()));
 
           if (!existing) {
             const newLead = {
               id: uid(),
-              name: ai.name || 'Cliente TocToc',
+              name: ai.name || (from.includes('toctoc') ? 'Cliente TocToc' : (from.includes('yapo') ? 'Cliente Yapo' : 'Cliente Portal')),
               phone: ai.phone || '',
-              channel: from.includes('toctoc') ? 'TocToc' : (from.includes('yapo') ? 'Yapo' : 'Correo'),
+              email: clientEmail,
+              portalLink: detectedUrl,
+              channel: from.includes('toctoc') ? 'TocToc' : (from.includes('yapo') ? 'Yapo' : (from.includes('portalinmobiliario') ? 'Portal Inmobiliario' : 'Correo')),
               operation: ai.operation || 'Venta',
-              property: ai.property || m.subject.replace(/.*solicitud.*propiedad\s*/i, '').slice(0, 40),
-              notes: `Detectado por IA desde correo portal.\nAsunto: ${m.subject}`,
+              property: ai.property || m.subject.replace(/.*solicitud.*propiedad\s*/i, '').slice(0, 45),
+              notes: cleanNotes,
+              emailRaw: text,
+              emailSubject: m.subject,
               stage: 'Primer Contacto',
               status: 'Activo',
               firstContact: todayISO(),
@@ -9848,7 +10600,7 @@ async function scanInboxWithAiForPortalLeads(isBackground = false) {
             persistLead(newLead);
             detectedCount++;
 
-            // Lanzar Alerta Emergente con Botón de WhatsApp Web
+            // Lanzar Alerta Emergente con Botones de WhatsApp Web, Edición y Ver Correo
             showPortalLeadDetectionAlert(newLead);
           }
         }
@@ -9882,14 +10634,17 @@ function showPortalLeadDetectionAlert(lead) {
   const overlay = document.getElementById('emailAlertOverlay');
   const list = document.getElementById('emailAlertList');
   if (overlay && list) {
+    const info = parseLeadEmailDetails(lead);
     list.innerHTML = `
-      <div class="crm-source-card" style="text-align:left; border:1.5px solid var(--gold);">
-        <strong style="font-size:15px;">🎉 ¡Nuevo Cliente Detectado por Correo!</strong>
-        <div style="font-size:13px; margin:6px 0;"><strong>${sanitize(lead.name)}</strong> · ${sanitize(lead.channel)}</div>
-        <div class="hint" style="margin-bottom:10px;">Interés: 🏠 ${sanitize(lead.property || 'Inmueble')} · 📞 ${sanitize(lead.phone || 'Sin fono')}</div>
-        <div style="display:flex; gap:8px;">
+      <div class="crm-source-card" style="text-align:left; border:1.5px solid var(--gold); margin-bottom:10px;">
+        <strong style="font-size:15px; color:var(--gold);">🎉 ¡Nuevo Cliente Detectado por Correo!</strong>
+        <div style="font-size:13.5px; margin:6px 0;"><strong>${sanitize(lead.name)}</strong> · <span class="badge" style="background:var(--gold); color:#000; font-size:11px; padding:2px 6px;">${sanitize(lead.channel || 'Portal')}</span></div>
+        <div class="hint" style="margin-bottom:8px;">🏠 Interés: <strong>${sanitize(lead.property || 'Inmueble')}</strong> ${lead.phone ? '· 📞 ' + sanitize(lead.phone) : ''}</div>
+        ${info.portalLink ? `<div style="margin-bottom:10px;"><a href="${safeUrl(info.portalLink)}" target="_blank" rel="noopener" class="ghost small" style="text-decoration:none;">🌐 Comprobar aviso en portal ↗</a></div>` : ''}
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
           ${waUrl ? `<a href="${safeUrl(waUrl)}" target="_blank" class="primary small" style="text-decoration:none;">💬 Hablar por WhatsApp Web</a>` : ''}
-          <button type="button" class="ghost small" onclick="openLeadEditor(state.leads[0])">👤 Ver Ficha</button>
+          <button type="button" class="ghost small" onclick="openLeadEditorById('${lead.id}')">✏️ Editar directamente aquí</button>
+          <button type="button" class="ghost small" onclick="openLeadEmailDetailModalById('${lead.id}')">✉️ Ver contenido del correo</button>
         </div>
       </div>
     ` + list.innerHTML;
@@ -9928,7 +10683,755 @@ function exportAdsCustomAudienceCsv() {
 }
 
 bootAuthentication();
+
+
+/* =========================================================================
+   CENTRO DE PERSONALIZACIÓN Y AJUSTES DINÁMICOS DEL CRM (V3.2)
+   Permite modificar y personalizar todo dentro de la misma aplicación:
+   - Etapas del embudo (Pipeline)
+   - Campos personalizados para contactos y propiedades
+   - Canales y fuentes de captura
+   - Tiempos SLA y reglas de velocidad de contacto
+   - Datos de la corredora, branding y comisiones
+   - Textos de bots y prompt de Cima AI
+========================================================================= */
+
+let activeSettingsTab = 'pipeline';
+
+function switchSettingsTab(tabName) {
+  activeSettingsTab = tabName;
+  document.querySelectorAll('#settingsNavTabs .settings-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.settingsTab === tabName);
+  });
+  document.querySelectorAll('.settings-tab-panel').forEach(panel => {
+    panel.style.display = (panel.id === `settingsPanel-${tabName}`) ? 'block' : 'none';
+  });
+  renderActiveSettingsTab();
+}
+
+function initSettingsNavTabs() {
+  document.querySelectorAll('#settingsNavTabs .settings-tab-btn').forEach(btn => {
+    if (!btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => switchSettingsTab(btn.dataset.settingsTab));
+    }
+  });
+}
+
+function renderActiveSettingsTab() {
+  if (activeSettingsTab === 'pipeline') renderCustomizationStages();
+  if (activeSettingsTab === 'custom-fields') renderCustomizationFields();
+  if (activeSettingsTab === 'channels') renderCustomizationChannels();
+  if (activeSettingsTab === 'sla') renderCustomizationSLA();
+  if (activeSettingsTab === 'branding') renderCustomizationBranding();
+  if (activeSettingsTab === 'bots') renderCustomizationBots();
+}
+
+// -------------------------------------------------------------------------
+// A. GESTOR DE ETAPAS DEL EMBUDO (PIPELINE)
+// -------------------------------------------------------------------------
+function renderCustomizationStages() {
+  const container = document.getElementById('settingsStagesList');
+  if (!container) return;
+  const stages = getCustomStages();
+  
+  container.innerHTML = stages.map((s, idx) => {
+    const name = typeof s === 'string' ? s : s.name;
+    const color = (typeof s === 'object' && s.color) ? s.color : 'var(--green)';
+    const isClosed = (typeof s === 'object') ? !!s.isClosed : CLOSED_STAGES.has(name);
+    
+    return `
+      <div class="crm-source-card" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 14px; margin:0;" data-stage-idx="${idx}">
+        <div style="display:flex; align-items:center; gap:10px; flex:1;">
+          <span style="cursor:grab; color:var(--text-dim); font-size:14px;">☰</span>
+          <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${color};"></span>
+          <input type="text" class="stage-name-input" data-stage-idx="${idx}" value="${escapeAttr(name)}" style="font-weight:600; flex:1; max-width:320px;">
+          <label style="display:flex; align-items:center; gap:4px; font-size:11.5px; color:var(--text-dim); margin-left:8px; cursor:pointer;">
+            <input type="checkbox" class="stage-closed-check" data-stage-idx="${idx}" ${isClosed ? 'checked' : ''}> Cierre
+          </label>
+        </div>
+        <div style="display:flex; gap:4px;">
+          <button type="button" class="ghost small" onclick="moveStageOrder(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="Subir">⬆️</button>
+          <button type="button" class="ghost small" onclick="moveStageOrder(${idx}, 1)" ${idx === stages.length - 1 ? 'disabled' : ''} title="Bajar">⬇️</button>
+          <button type="button" class="ghost small danger" onclick="deleteStage(${idx})" title="Eliminar etapa">🗑️</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function moveStageOrder(idx, delta) {
+  const stages = [...getCustomStages()];
+  const target = idx + delta;
+  if (target < 0 || target >= stages.length) return;
+  const temp = stages[idx];
+  stages[idx] = stages[target];
+  stages[target] = temp;
+  if (!state.settings) state.settings = {};
+  state.settings.stages = stages;
+  refreshStageOptions();
+  renderCustomizationStages();
+}
+
+function deleteStage(idx) {
+  const stages = [...getCustomStages()];
+  const stageToDelete = stages[idx];
+  const name = typeof stageToDelete === 'string' ? stageToDelete : stageToDelete.name;
+  
+  const leadsInStage = (state.leads || []).filter(l => (l.stage || 'Primer Contacto') === name);
+  if (leadsInStage.length) {
+    if (!confirm(`Hay ${leadsInStage.length} contacto(s) en la etapa "${name}". Si la eliminas, pasarán automáticamente a "Primer Contacto". ¿Deseas continuar?`)) {
+      return;
+    }
+    leadsInStage.forEach(l => { l.stage = 'Primer Contacto'; touchLead(l); });
+  }
+
+  stages.splice(idx, 1);
+  if (!state.settings) state.settings = {};
+  state.settings.stages = stages;
+  refreshStageOptions();
+  renderCustomizationStages();
+  saveState();
+  renderCRM();
+  showToast(`Etapa "${name}" eliminada ✅`);
+}
+
+document.getElementById('btnAddNewStage')?.addEventListener('click', () => {
+  const nameInput = document.getElementById('newStageName');
+  const colorInput = document.getElementById('newStageColor');
+  const isClosedInput = document.getElementById('newStageIsClosed');
+  const name = (nameInput.value || '').trim();
+  if (!name) { showToast('Escribe un nombre para la nueva etapa'); nameInput.focus(); return; }
+
+  const stages = [...getCustomStages()];
+  if (stages.some(s => (typeof s === 'string' ? s : s.name).toLowerCase() === name.toLowerCase())) {
+    showToast('Ya existe una etapa con ese nombre');
+    return;
+  }
+
+  stages.push({
+    name,
+    color: colorInput.value || 'var(--green)',
+    isClosed: !!isClosedInput.checked
+  });
+
+  if (!state.settings) state.settings = {};
+  state.settings.stages = stages;
+  refreshStageOptions();
+  renderCustomizationStages();
+  saveState();
+  renderCRM();
+
+  nameInput.value = '';
+  isClosedInput.checked = false;
+  showToast(`¡Nueva etapa "${name}" agregada al embudo! ✅`);
+});
+
+document.getElementById('btnSaveStagesChanges')?.addEventListener('click', () => {
+  const stages = [...getCustomStages()];
+  document.querySelectorAll('.stage-name-input').forEach(input => {
+    const idx = parseInt(input.dataset.stageIdx, 10);
+    const newName = (input.value || '').trim();
+    if (stages[idx] && newName) {
+      if (typeof stages[idx] === 'string') stages[idx] = { name: newName, color: 'var(--green)', isClosed: false };
+      else stages[idx].name = newName;
+    }
+  });
+  document.querySelectorAll('.stage-closed-check').forEach(chk => {
+    const idx = parseInt(chk.dataset.stageIdx, 10);
+    if (stages[idx] && typeof stages[idx] === 'object') {
+      stages[idx].isClosed = chk.checked;
+    }
+  });
+
+  if (!state.settings) state.settings = {};
+  state.settings.stages = stages;
+  refreshStageOptions();
+  saveState();
+  renderCRM();
+  showToast('¡Cambios en las etapas guardados y sincronizados! ✅');
+});
+
+document.getElementById('btnResetDefaultStages')?.addEventListener('click', () => {
+  if (!confirm('¿Deseas restaurar las 13 etapas predeterminadas de Cima Propiedades?')) return;
+  if (!state.settings) state.settings = {};
+  state.settings.stages = [...DEFAULT_STAGE_CONFIG];
+  refreshStageOptions();
+  renderCustomizationStages();
+  saveState();
+  renderCRM();
+  showToast('Etapas restauradas a los valores de fábrica.');
+});
+
+// -------------------------------------------------------------------------
+// B. GESTOR DE CAMPOS PERSONALIZADOS (CUSTOM FIELDS)
+// -------------------------------------------------------------------------
+let currentCfFilter = 'all';
+
+function getCustomFieldsList() {
+  return (state.settings && state.settings.customFields) || [];
+}
+
+function renderCustomizationFields() {
+  const container = document.getElementById('settingsCustomFieldsList');
+  if (!container) return;
+  const allFields = getCustomFieldsList();
+  const fields = allFields.filter(f => currentCfFilter === 'all' || f.target === currentCfFilter);
+
+  if (!fields.length) {
+    container.innerHTML = `<div class="crm-empty" style="grid-column:1/-1; padding:24px;">No hay campos personalizados en esta sección. Crea el primero arriba.</div>`;
+    return;
+  }
+
+  const typeLabels = { text:'Texto simple', number:'Número / Monto', date:'Fecha', select:'Lista de opciones' };
+
+  container.innerHTML = fields.map((f, idx) => `
+    <div class="crm-source-card" style="margin:0; text-align:left; border:1px solid var(--border);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+        <strong style="font-size:13.5px; color:var(--text);">${escapeHtml(f.label)}</strong>
+        <button type="button" class="ghost small danger" onclick="deleteCustomField('${escapeAttr(f.id)}')">🗑️</button>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+        <span class="badge" style="background:rgba(212,175,55,0.15); color:var(--gold); font-size:11px;">${typeLabels[f.type] || f.type}</span>
+        <span class="badge" style="background:var(--bg-panel-3); color:var(--text-dim); font-size:11px;">${f.target === 'property' ? '🏠 Propiedad' : '👤 Contacto'}</span>
+      </div>
+      ${f.options && f.options.length ? `<div class="hint" style="font-size:11px;">Opciones: ${escapeHtml(f.options.join(', '))}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+document.querySelectorAll('.cf-filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cf-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCfFilter = btn.dataset.cfFilter;
+    renderCustomizationFields();
+  });
+});
+
+document.getElementById('newCfType')?.addEventListener('change', (e) => {
+  const optRow = document.getElementById('newCfOptionsRow');
+  if (optRow) optRow.style.display = (e.target.value === 'select') ? 'block' : 'none';
+});
+
+document.getElementById('btnAddNewCustomField')?.addEventListener('click', () => {
+  const labelInput = document.getElementById('newCfLabel');
+  const typeInput = document.getElementById('newCfType');
+  const targetInput = document.getElementById('newCfTarget');
+  const optionsInput = document.getElementById('newCfOptions');
+
+  const label = (labelInput.value || '').trim();
+  if (!label) { showToast('Escribe el nombre del campo personalizado'); labelInput.focus(); return; }
+
+  const id = 'cf_' + label.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Math.random().toString(36).slice(2, 6);
+  const type = typeInput.value || 'text';
+  const target = targetInput.value || 'lead';
+  const options = (type === 'select') ? (optionsInput.value || '').split(',').map(o => o.trim()).filter(Boolean) : [];
+
+  if (!state.settings) state.settings = {};
+  if (!Array.isArray(state.settings.customFields)) state.settings.customFields = [];
+
+  state.settings.customFields.push({ id, label, type, target, options });
+  saveState();
+  renderCustomizationFields();
+
+  labelInput.value = '';
+  optionsInput.value = '';
+  showToast(`Campo "${label}" creado con éxito ✅`);
+});
+
+function deleteCustomField(id) {
+  if (!confirm('¿Seguro que deseas eliminar este campo personalizado?')) return;
+  if (!state.settings || !Array.isArray(state.settings.customFields)) return;
+  state.settings.customFields = state.settings.customFields.filter(f => f.id !== id);
+  saveState();
+  renderCustomizationFields();
+  showToast('Campo eliminado ✅');
+}
+
+// Renderizado de inputs dinámicos en la ficha del contacto
+function renderLeadCustomFieldsInputs(lead) {
+  const container = document.getElementById('leadCustomFieldsContainer');
+  const box = document.getElementById('leadCustomFieldsInputs');
+  if (!container || !box) return;
+
+  const allFields = getCustomFieldsList();
+  const leadFields = allFields.filter(f => f.target === 'lead' || !f.target);
+  if (!leadFields.length) {
+    container.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  container.style.display = 'block';
+  box.innerHTML = leadFields.map(f => {
+    const val = (lead && lead.customFields && lead.customFields[f.id]) || '';
+    if (f.type === 'select') {
+      const opts = (f.options || []).map(o => `<option value="${escapeAttr(o)}" ${o === val ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
+      return `
+        <div class="field" style="flex:1 1 200px;">
+          <label style="font-size:12px;">${escapeHtml(f.label)}</label>
+          <select class="lead-cf-input" data-cf-id="${escapeAttr(f.id)}"><option value="">-- Seleccionar --</option>${opts}</select>
+        </div>`;
+    } else if (f.type === 'date') {
+      return `
+        <div class="field" style="flex:1 1 160px;">
+          <label style="font-size:12px;">${escapeHtml(f.label)}</label>
+          <input type="date" class="lead-cf-input" data-cf-id="${escapeAttr(f.id)}" value="${escapeAttr(val)}">
+        </div>`;
+    } else if (f.type === 'number') {
+      return `
+        <div class="field" style="flex:1 1 160px;">
+          <label style="font-size:12px;">${escapeHtml(f.label)}</label>
+          <input type="number" class="lead-cf-input" data-cf-id="${escapeAttr(f.id)}" value="${escapeAttr(val)}" placeholder="0">
+        </div>`;
+    } else {
+      return `
+        <div class="field" style="flex:1 1 200px;">
+          <label style="font-size:12px;">${escapeHtml(f.label)}</label>
+          <input type="text" class="lead-cf-input" data-cf-id="${escapeAttr(f.id)}" value="${escapeAttr(val)}" placeholder="...">
+        </div>`;
+    }
+  }).join('');
+}
+
+function collectLeadCustomFields() {
+  const values = {};
+  document.querySelectorAll('.lead-cf-input').forEach(input => {
+    const id = input.dataset.cfId;
+    if (id) values[id] = input.value;
+  });
+  return values;
+}
+
+// -------------------------------------------------------------------------
+// C. GESTOR DE CANALES Y PORTALES DE CAPTURA
+// -------------------------------------------------------------------------
+const DEFAULT_CHANNELS_LIST = ['WhatsApp', 'TocToc', 'Yapo', 'Portal Inmobiliario', 'Proppit', 'Facebook', 'Instagram', 'Correo', 'Canje', 'Referido', 'Otro'];
+
+function getCustomChannels() {
+  if (state.settings && Array.isArray(state.settings.channels) && state.settings.channels.length) {
+    return state.settings.channels;
+  }
+  return DEFAULT_CHANNELS_LIST;
+}
+
+function renderCustomizationChannels() {
+  const container = document.getElementById('settingsChannelsList');
+  if (!container) return;
+  const channels = getCustomChannels();
+
+  container.innerHTML = channels.map(ch => `
+    <div style="background:var(--bg-panel-2); border:1px solid var(--border); border-radius:20px; padding:6px 14px; display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600;">
+      <span>${escapeHtml(ch)}</span>
+      <button type="button" onclick="deleteCustomChannel('${escapeAttr(ch)}')" style="background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:12px; padding:0;" title="Quitar canal">✕</button>
+    </div>
+  `).join('');
+}
+
+function deleteCustomChannel(chName) {
+  const channels = getCustomChannels().filter(c => c !== chName);
+  if (!channels.length) { showToast('Debe existir al menos un canal'); return; }
+  if (!state.settings) state.settings = {};
+  state.settings.channels = channels;
+  saveState();
+  renderCustomizationChannels();
+  populateChannelSelects();
+  showToast(`Canal "${chName}" eliminado`);
+}
+
+document.getElementById('btnAddChannelBtn')?.addEventListener('click', () => {
+  const input = document.getElementById('newChannelInput');
+  const val = (input.value || '').trim();
+  if (!val) { showToast('Escribe el nombre del canal'); input.focus(); return; }
+  const channels = [...getCustomChannels()];
+  if (channels.some(c => c.toLowerCase() === val.toLowerCase())) { showToast('Ese canal ya existe'); return; }
+  channels.push(val);
+  if (!state.settings) state.settings = {};
+  state.settings.channels = channels;
+  saveState();
+  renderCustomizationChannels();
+  populateChannelSelects();
+  input.value = '';
+  showToast(`Canal "${val}" agregado con éxito ✅`);
+});
+
+document.getElementById('btnResetChannelsBtn')?.addEventListener('click', () => {
+  if (!confirm('¿Restaurar los canales de captura originales?')) return;
+  if (!state.settings) state.settings = {};
+  state.settings.channels = [...DEFAULT_CHANNELS_LIST];
+  saveState();
+  renderCustomizationChannels();
+  populateChannelSelects();
+  showToast('Canales restaurados');
+});
+
+function populateChannelSelects() {
+  const channels = getCustomChannels();
+  const sel = document.getElementById('leadChannel');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = channels.map(c => `<option value="${escapeAttr(c)}" ${c === cur ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
+  }
+}
+
+// -------------------------------------------------------------------------
+// D. GESTOR DE TIEMPOS SLA Y REGLAS DE RESPUESTA
+// -------------------------------------------------------------------------
+function renderCustomizationSLA() {
+  const sla = (state.settings && state.settings.sla) || {};
+  const optEl = document.getElementById('cfgSlaOptimal');
+  const warnEl = document.getElementById('cfgSlaWarning');
+  const critEl = document.getElementById('cfgSlaCritical');
+  const coldEl = document.getElementById('cfgSlaColdDays');
+  const tmplEl = document.getElementById('cfgAutoGreetingTemplate');
+
+  if (optEl) optEl.value = sla.optimalMinutes || 5;
+  if (warnEl) warnEl.value = sla.warningMinutes || 15;
+  if (critEl) critEl.value = sla.criticalMinutes || 30;
+  if (coldEl) coldEl.value = sla.coldLeadDays || 7;
+  if (tmplEl) tmplEl.value = sla.autoGreetingTemplate || 'Hola {{nombre}}, recibimos tu consulta en {{portal}} por la propiedad "{{propiedad}}". Un asesor de Cima Propiedades se contactará contigo a la brevedad.';
+}
+
+document.getElementById('btnSaveSlaSettings')?.addEventListener('click', () => {
+  if (!state.settings) state.settings = {};
+  state.settings.sla = {
+    optimalMinutes: parseInt(document.getElementById('cfgSlaOptimal').value, 10) || 5,
+    warningMinutes: parseInt(document.getElementById('cfgSlaWarning').value, 10) || 15,
+    criticalMinutes: parseInt(document.getElementById('cfgSlaCritical').value, 10) || 30,
+    coldLeadDays: parseInt(document.getElementById('cfgSlaColdDays').value, 10) || 7,
+    autoGreetingTemplate: document.getElementById('cfgAutoGreetingTemplate').value.trim()
+  };
+  saveState();
+  showToast('Tiempos y reglas SLA guardados con éxito ✅');
+});
+
+// -------------------------------------------------------------------------
+// E. GESTOR DE DATOS DE LA CORREDORA Y BRANDING
+// -------------------------------------------------------------------------
+function renderCustomizationBranding() {
+  const b = (state.settings && state.settings.branding) || {};
+  const nameEl = document.getElementById('cfgCompanyName');
+  const phoneEl = document.getElementById('cfgCompanyPhone');
+  const emailEl = document.getElementById('cfgCompanyEmail');
+  const currEl = document.getElementById('cfgDefaultCurrency');
+  const commEl = document.getElementById('cfgDefaultCommission');
+  const regEl = document.getElementById('cfgCompanyRegion');
+
+  if (nameEl) nameEl.value = b.companyName || 'Cima Propiedades';
+  if (phoneEl) phoneEl.value = b.companyPhone || '+56 9 1234 5678';
+  if (emailEl) emailEl.value = b.companyEmail || 'contacto@cimapropiedades.cl';
+  if (currEl) currEl.value = b.defaultCurrency || 'CLP';
+  if (commEl) commEl.value = b.defaultCommission || 2.0;
+  if (regEl) regEl.value = b.companyRegion || 'Concepción y San Pedro de la Paz, Bío Bío';
+}
+
+function applyBrandingSettings() {
+  const b = (state.settings && state.settings.branding) || {};
+  const name = b.companyName || 'Cima Propiedades';
+  document.querySelectorAll('.app-brand-name, .crm-brand-name').forEach(el => el.textContent = name);
+  document.title = `${name} — CRM Inmobiliario`;
+}
+
+document.getElementById('btnSaveBrandingSettings')?.addEventListener('click', () => {
+  if (!state.settings) state.settings = {};
+  state.settings.branding = {
+    companyName: document.getElementById('cfgCompanyName').value.trim() || 'Cima Propiedades',
+    companyPhone: document.getElementById('cfgCompanyPhone').value.trim(),
+    companyEmail: document.getElementById('cfgCompanyEmail').value.trim(),
+    defaultCurrency: document.getElementById('cfgDefaultCurrency').value,
+    defaultCommission: parseFloat(document.getElementById('cfgDefaultCommission').value) || 2.0,
+    companyRegion: document.getElementById('cfgCompanyRegion').value.trim()
+  };
+  saveState();
+  applyBrandingSettings();
+  showToast('Datos de la corredora actualizados ✅');
+});
+
+// -------------------------------------------------------------------------
+// F. GESTOR DE BOTS E INTELIGENCIA ARTIFICIAL
+// -------------------------------------------------------------------------
+function renderCustomizationBots() {
+  const bots = (state.settings && state.settings.bots) || {};
+  const ai = (state.settings && state.settings.aiAgent) || {};
+
+  const wEl = document.getElementById('cfgBotWelcomeMsg');
+  const mEl = document.getElementById('cfgBotMortgageMsg');
+  const vEl = document.getElementById('cfgBotVisitMsg');
+  const pEl = document.getElementById('cfgAiSystemPrompt');
+
+  if (wEl) wEl.value = bots.welcomeMsg || '¡Hola! Gracias por comunicarte con nosotros. ¿Buscas comprar o arrendar?';
+  if (mEl) mEl.value = bots.mortgageMsg || '¿Cuentas con crédito hipotecario preaprobado o deseas que te ayudemos a evaluarlo con nuestros bancos aliados?';
+  if (vEl) vEl.value = bots.visitMsg || 'Perfecto. Disponemos de visitas de lunes a sábado. ¿Qué horario te acomoda más?';
+  if (pEl) pEl.value = ai.systemPrompt || 'Eres Cima AI, asesor inmobiliario de Cima Propiedades. Responde siempre con profesionalismo, enfoque en agendamiento y asesoría financiera personalizada.';
+}
+
+document.getElementById('btnSaveBotsSettings')?.addEventListener('click', () => {
+  if (!state.settings) state.settings = {};
+  state.settings.bots = {
+    welcomeMsg: document.getElementById('cfgBotWelcomeMsg').value.trim(),
+    mortgageMsg: document.getElementById('cfgBotMortgageMsg').value.trim(),
+    visitMsg: document.getElementById('cfgBotVisitMsg').value.trim()
+  };
+  state.settings.aiAgent = {
+    systemPrompt: document.getElementById('cfgAiSystemPrompt').value.trim()
+  };
+  saveState();
+  showToast('Ajustes de Bots e IA guardados con éxito ✅');
+});
+
+
+
+// Inicializar personalizaciones al cargar la app
+try {
+  refreshStageOptions();
+  populateChannelSelects();
+  applyBrandingSettings();
+} catch(e) { console.warn('Error inicializando personalizaciones:', e); }
+
+
+
+/* =========================================================================
+   ENRUTAMIENTO WHATSAPP REALTIME POR ROL & MOTOR DE TRIAGE IA (V3.3)
+   - Captadoras reciben únicamente alertas en tiempo real de sus clientes asignados.
+   - Administradores y asistentes de oficina reciben todas las alertas.
+   - La IA evalúa si el bot auto-responde o si pausa y genera alerta humana urgente.
+========================================================================= */
+
+function playUrgentAlarmSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    [0, 0.22, 0.44].forEach(offset => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(880, now + offset);
+      osc.frequency.exponentialRampToValueAtTime(1174, now + offset + 0.12);
+      gain.gain.setValueAtTime(0.35, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.2);
+    });
+  } catch(e) { console.warn('Audio alarm error:', e); }
+}
+
+function evaluateMessageIntent(text, lead) {
+  const lower = (text || '').toLowerCase();
+
+  // 1. Negociación de precios, contraofertas o comisiones
+  if (/(?:oferta|ofrezco|rebaja|descuento|menos|negociar|3\d{3}\s*uf|4\d{3}\s*uf|5\d{3}\s*uf|precio conversable|último precio|cuanto cobran|comision)/i.test(lower)) {
+    return { shouldEscalate: true, reason: 'Negociación de precio u oferta comercial' };
+  }
+  // 2. Dudas legales, escrituras, posesión efectiva o estudios de títulos
+  if (/(?:título|posesión efectiva|herencia|embargo|conservador|notar[íi]a|promesa|estudio de título|abogado|hipoteca|gravamen)/i.test(lower)) {
+    return { shouldEscalate: true, reason: 'Consulta legal / Estudio de títulos' };
+  }
+  // 3. Reclamos, quejas o molestia del cliente
+  if (/(?:pésimo|reclamo|nadie me llama|estafa|engañar|mentira|enojad|molest|falta de respeto|denunciar|mala atencion)/i.test(lower)) {
+    return { shouldEscalate: true, reason: 'Cliente molesto o con reclamo formal' };
+  }
+  // 4. Petición explícita de hablar con humano o llamada telefónica urgente
+  if (/(?:ll[aá]mame|hablar con persona|hablar con alguien|humano|asesor directo|dueño|llamar urgente|llamar por telefono|pueden llamar)/i.test(lower)) {
+    return { shouldEscalate: true, reason: 'Cliente solicita llamada / atención humana directa' };
+  }
+  // 5. Intención de reserva inmediata
+  if (/(?:quiero reservar|dónde transfiero|cómo se reserva|pago de reserva|cuenta corriente para reservar)/i.test(lower)) {
+    return { shouldEscalate: true, reason: 'Intención de reserva inmediata de propiedad' };
+  }
+
+  return { shouldEscalate: false, reason: 'Consulta informativa estándar sobre propiedad o visita' };
+}
+
+async function handleIncomingWhatsAppRealtimeMessage(row) {
+  const digits = phoneToWhatsAppDigits(row.phone) || String(row.phone||'').replace(/\D/g,'');
+  const lead = findLeadByWaPhone(digits);
+  const myId = currentProfile?.id;
+  const isCaptadora = currentProfile && currentProfile.role === 'captadora';
+  const isAssignedToMe = lead && (lead.assignedTo === myId || lead.assigned_to === myId);
+  const isOfficeStaff = isAdminUser || (currentProfile && (currentProfile.role === 'asistente' || currentProfile.role === 'admin'));
+
+  // 1. FILTRADO ESTRICTO POR ROL:
+  // Si el usuario es captadora y el lead NO está asignado a ella, NO alertar ni molestar
+  if (isCaptadora && !isAssignedToMe) {
+    console.info(`WhatsApp entrante de ${row.phone} ignorado para captadora (pertenece a otra cartera)`);
+    return;
+  }
+
+  // 2. TRIAGE CON INTELIGENCIA ARTIFICIAL
+  const evalResult = evaluateMessageIntent(row.body, lead);
+  const clientName = lead?.name || row.phone;
+
+  if (evalResult.shouldEscalate) {
+    // CASO A: LA IA DETECTA QUE SE REQUIERE INTERVENCIÓN HUMANA
+    if (lead) {
+      lead.botPaused = true;
+      lead.requiresHuman = true;
+      lead.humanEscalationReason = evalResult.reason;
+      touchLead(lead);
+      saveState();
+    }
+
+    playUrgentAlarmSound();
+    sendDesktopNotification(
+      `🚨 ¡ATENCIÓN URGENTE! ${clientName}`,
+      `Intervención requerida: ${evalResult.reason}. Clic para abrir chat.`
+    );
+    showUrgentHumanInterventionAlert(row, lead, evalResult.reason);
+
+  } else {
+    // CASO B: CONSULTA RUTINARIA / BOT ACTIVO
+    playLeadChimeSound();
+    sendDesktopNotification(
+      `💬 WhatsApp de ${clientName}`,
+      (row.body || '').slice(0, 120)
+    );
+
+    // Si el bot está activo y el lead no está pausado por humano, auto-responder
+    if (lead && !lead.botPaused && state.settings?.bots?.autoReplyEnabled !== false) {
+      triggerBotAutoReply(row, lead, evalResult);
+    }
+  }
+}
+
+function showUrgentHumanInterventionAlert(row, lead, reason) {
+  const digits = phoneToWhatsAppDigits(row.phone) || String(row.phone||'').replace(/\D/g,'');
+  const clientName = lead?.name || row.phone;
+  const overlay = document.getElementById('urgentHumanAlertModal');
+  if (!overlay) return;
+  const title = document.getElementById('urgentHumanAlertTitle');
+  const desc = document.getElementById('urgentHumanAlertDesc');
+  const msgEl = document.getElementById('urgentHumanAlertMsg');
+  const btnChat = document.getElementById('btnOpenUrgentChat');
+
+  if (title) title.innerHTML = `🚨 ¡Intervención Humana Requerida! <br><span style="font-size:14px; color:var(--text); font-weight:normal;">Cliente: <strong>${escapeHtml(clientName)}</strong> ${lead?.property ? '· Inmueble: ' + escapeHtml(lead.property) : ''}</span>`;
+  if (desc) desc.innerHTML = `La IA pausó el bot automáticamente porque detectó: <strong style="color:#ff6b6b;">${escapeHtml(reason)}</strong>.`;
+  if (msgEl) msgEl.textContent = `"${row.body || ''}"`;
+
+  if (btnChat) {
+    btnChat.onclick = () => {
+      overlay.classList.remove('active');
+      goToAppView('crm-inbox-chat');
+      crmInboxSelectedPhone = digits;
+      renderCRMInboxChat();
+    };
+  }
+
+  overlay.classList.add('active');
+}
+
+async function triggerBotAutoReply(row, lead, evalResult) {
+  // Solo auto-responder si no se ha respondido en los últimos 60 segundos para evitar bucles
+  const digits = phoneToWhatsAppDigits(row.phone);
+  const recentOut = (state.whatsappMessages || []).filter(m => phoneToWhatsAppDigits(m.phone) === digits && m.direction === 'outbound');
+  const lastOut = recentOut[recentOut.length - 1];
+  if (lastOut && (Date.now() - new Date(lastOut.created_at).getTime()) < 45000) {
+    return;
+  }
+
+  const propName = lead?.property || 'la propiedad de tu interés';
+  const clientName = lead?.name ? ` ${lead.name}` : '';
+  const replyText = `Hola${clientName}, gracias por escribir a Cima Propiedades. Recibimos tu consulta por "${propName}". Un asesor está revisando tu ficha y te escribirá en breve. Si deseas coordinar visita directamente, déjanos tu disponibilidad de horario.`;
+
+  try {
+    if (typeof enviarWhatsAppDirecto === 'function') {
+      await enviarWhatsAppDirecto(row.phone, replyText);
+    }
+  } catch(e) {
+    console.warn('Auto-reply bot error:', e);
+  }
+}
+
+// -------------------------------------------------------------------------
+// NAVEGACIÓN MÓVIL PWA PARA CAPTADORAS (TOUCH BOTTOM NAV)
+// -------------------------------------------------------------------------
+function initMobileCaptadoraNav() {
+  document.querySelectorAll('.mc-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mc-nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.mcTab;
+      if (tab === 'leads') {
+        goToAppView('crm-all-leads');
+        // Filtrar a solo mis leads si es captadora
+        const myId = currentProfile?.id;
+        if (myId && document.getElementById('crmAllLeadsAgentFilter')) {
+          document.getElementById('crmAllLeadsAgentFilter').value = myId;
+          renderCRMAllLeads();
+        }
+      } else if (tab === 'chats') {
+        goToAppView('crm-inbox-chat');
+      } else if (tab === 'visitas') {
+        goToAppView('crm-calendar');
+      } else if (tab === 'perfil') {
+        goToAppView('crm-settings');
+      }
+    });
+  });
+
+  // Si el usuario es captadora, activar clase en body para adaptar interfaz
+  if (currentProfile && currentProfile.role === 'captadora') {
+    document.body.classList.add('role-captadora');
+  }
+}
+
+// Hook en post-login
+const origHandleSessionValid = window.handleSessionValid;
+if (typeof origHandleSessionValid === 'function') {
+  window.handleSessionValid = function(session) {
+    origHandleSessionValid(session);
+    setTimeout(initMobileCaptadoraNav, 200);
+  };
+} else {
+  setTimeout(initMobileCaptadoraNav, 1000);
+}
+
 </script>
+
+
+
+<!-- MODAL DE ALERTA DE INTERVENCIÓN HUMANA URGENTE (IA) -->
+<div class="cima-modal-overlay" id="urgentHumanAlertModal">
+  <div class="cima-modal" style="max-width:520px; border:2px solid var(--danger);">
+    <div class="cima-modal-head" style="background:rgba(220,53,69,0.15); border-bottom:1px solid rgba(220,53,69,0.3);">
+      <h3 id="urgentHumanAlertTitle" style="color:#ff6b6b;">🚨 ¡Intervención Humana Requerida!</h3>
+      <button type="button" class="cima-modal-close" onclick="closeCimaModal('urgentHumanAlertModal')">✕</button>
+    </div>
+    <div class="cima-modal-body" style="padding:16px;">
+      <div style="font-size:13.5px; line-height:1.5; margin-bottom:12px;" id="urgentHumanAlertDesc">
+        La Inteligencia Artificial analizó el mensaje del cliente y <strong>pausó el bot automáticamente</strong> para evitar respuestas inadecuadas.
+      </div>
+      <div style="background:rgba(0,0,0,0.3); border-left:3px solid var(--danger); padding:10px 12px; border-radius:4px; font-style:italic; font-size:13px; color:var(--text); margin-bottom:14px;" id="urgentHumanAlertMsg"></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" class="ghost small" onclick="closeCimaModal('urgentHumanAlertModal')">Entendido</button>
+        <button type="button" class="primary small" id="btnOpenUrgentChat" style="background:var(--danger); border-color:var(--danger);">💬 Abrir chat y responder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BARRA DE NAVEGACIÓN TÁCTIL PARA TELÉFONOS (APP CAPTADORAS PWA) -->
+<div id="mobileCaptadoraBottomNav" class="mobile-captadora-nav">
+  <button type="button" class="mc-nav-btn active" data-mc-tab="leads">
+    <span class="mc-icon">📋</span>
+    <span class="mc-label">Mis Leads</span>
+  </button>
+  <button type="button" class="mc-nav-btn" data-mc-tab="chats">
+    <span class="mc-icon">💬</span>
+    <span class="mc-label">Mis Chats</span>
+    <span class="mc-badge" id="mcBadgeChats" style="display:none;">0</span>
+  </button>
+  <button type="button" class="mc-nav-btn" data-mc-tab="visitas">
+    <span class="mc-icon">📅</span>
+    <span class="mc-label">Visitas</span>
+  </button>
+  <button type="button" class="mc-nav-btn" data-mc-tab="perfil">
+    <span class="mc-icon">👤</span>
+    <span class="mc-label">Perfil</span>
+  </button>
+</div>
 
 </body>
 </html>

@@ -1,0 +1,44 @@
+{
+  "name": "Cima Propiedades — CRM & Captadoras",
+  "short_name": "Cima CRM",
+  "description": "CRM Inmobiliario y Portal Móvil para Captadoras de Cima Propiedades",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d1117",
+  "theme_color": "#c9a15a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230d1117' width='100' height='100' rx='20'/><text y='.9em' font-size='70' x='15' fill='%23c9a15a'>🏔️</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mis Leads (Captadora)",
+      "short_name": "Mis Leads",
+      "description": "Ver leads asignados a mi cartera",
+      "url": "/?view=captadora-leads",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>📋</text></svg>",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Chats WhatsApp",
+      "short_name": "Chats",
+      "description": "Conversaciones en tiempo real con clientes",
+      "url": "/?view=crm-inbox-chat",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>💬</text></svg>",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}
