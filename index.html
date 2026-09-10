@@ -1290,8 +1290,6 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
       </button>
       <div class="side-nav-children">
         <button type="button" class="side-nav-item app-view-btn" data-app-view="crm-contacts">Contactos</button>
-        <button type="button" class="side-nav-item app-view-btn" data-app-view="crm-companies">Compañías</button>
-        <button type="button" class="side-nav-item app-view-btn" data-app-view="crm-contacts" data-app-alias="1">Todos los contactos y c...</button>
         <button type="button" class="side-nav-item app-view-btn" data-app-view="panel-dossier">Archivos</button>
         <button type="button" class="side-nav-item app-view-btn" data-app-view="panel-publicaciones">Productos</button>
       </div>
@@ -1996,7 +1994,13 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
     <!-- ===== Calendario ===== -->
     <div class="crm-view" id="crm-calendar">
       <div class="card">
-        <div class="crm-page-head"><div><h3>📅 Calendario</h3><div class="hint">Días con próximos contactos agendados. Haz clic en un día para ver el detalle.</div></div></div>
+        <div class="crm-page-head">
+          <div>
+            <h3>📅 Calendario</h3>
+            <div class="hint">Días con próximos contactos agendados. Haz clic en un día o en una cita para ver, editar o sincronizar con Google Calendar.</div>
+          </div>
+          <button type="button" class="primary small" id="btnOpenAddCalendarEvent">+ Agendar Contacto o Visita</button>
+        </div>
         <div class="kommo-cal-head">
           <div class="kommo-cal-title" id="crmCalTitle"></div>
           <div class="kommo-cal-nav">
@@ -2050,22 +2054,43 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
       </div>
     </div>
 
-    <!-- ===== Listas ===== -->
-    <div class="crm-view" id="crm-companies">
+    <!-- ===== Automatizaciones: Secuencias Drip & Leads Fríos ===== -->
+    <div class="crm-view" id="crm-automations">
       <div class="card">
         <div class="crm-page-head">
           <div>
-            <h3>🏢 Directorio de Compañías & Alianzas Inmobiliarias</h3>
-            <div class="hint">Inmobiliarias, constructoras, bancos y corredoras aliadas para canje.</div>
+            <h3>⚡ Secuencias Drip & Reactivación de Leads Fríos</h3>
+            <div class="hint">Prospectos sin interacción reciente. Reactívalos con un clic vía WhatsApp antes de que se enfríen o compren en otra parte.</div>
           </div>
-          <button type="button" class="primary small" id="btnOpenAddCompanyModal">+ Registrar Compañía</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="primary small" id="btnRunDripSequences">⚡ Reactivar Leads Fríos</button>
+            <button type="button" class="ghost small" id="btnRefreshDripList">🔄 Actualizar</button>
+          </div>
         </div>
 
-        <div class="crm-toolbar" style="margin-top:14px;">
-          <input type="search" id="searchCompanies" placeholder="🔎 Buscar por nombre de empresa, RUT o contacto...">
+        <div class="row" style="margin-top:14px; gap:12px; align-items:flex-end;">
+          <div class="field" style="flex:1 1 200px;">
+            <label>Filtrar por días de inactividad</label>
+            <select id="dripDaysFilter">
+              <option value="3">🟡 Más de 3 días sin contacto (Alerta)</option>
+              <option value="7" selected>🟠 Más de 7 días sin contacto (Leads Fríos)</option>
+              <option value="14">🔴 Más de 14 días sin contacto (Crítico)</option>
+              <option value="all">Todos los prospectos activos</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1 1 180px;">
+            <label>Asesora asignada</label>
+            <select id="dripAgentFilter">
+              <option value="all">Todas las asesoras</option>
+            </select>
+          </div>
+          <div class="field" style="flex:0 0 160px;">
+            <label>Total en riesgo</label>
+            <div id="dripColdCountBadge" style="padding:9px 12px; font-weight:800; color:var(--gold); font-size:15px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px;">0 leads</div>
+          </div>
         </div>
 
-        <div id="companiesListContainer" style="margin-top:12px; display:grid; gap:10px;"></div>
+        <div id="coldLeadsDripList" style="margin-top:16px; display:grid; gap:10px;"></div>
       </div>
     </div>
 
@@ -2178,31 +2203,47 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
           </div>
         </div>
 
-        <div class="row" style="margin-top:14px;">
+        <div class="row" style="margin-top:14px; gap:12px; align-items:flex-end;">
+          <div class="field" style="flex:1 1 240px;">
+            <label>Filtrar por Propiedad Específica</label>
+            <select id="bcastPropertyFilter">
+              <option value="all">🏠 Todas las propiedades en cartera</option>
+            </select>
+          </div>
           <div class="field" style="flex:1 1 200px;">
-            <label>Público Destinatario (Segmento)</label>
+            <label>Público Destinatario (Etapa / Estado)</label>
             <select id="bcastTargetFilter">
               <option value="all_active">Todos los leads activos</option>
-              <option value="stage_seguimiento">En etapa: Seguimiento</option>
-              <option value="stage_primer_contacto">En etapa: Primer Contacto</option>
-              <option value="tag_vip">Etiqueta: VIP / Inversionistas</option>
-              <option value="channel_whatsapp">Canal: WhatsApp</option>
+              <option value="stage_desistio">❌ En etapa: Desistió / Rechazó</option>
+              <option value="stage_seguimiento">🟡 En etapa: Seguimiento</option>
+              <option value="stage_primer_contacto">🟢 En etapa: Primer Contacto</option>
+              <option value="stage_visita">📅 Se realizó visita</option>
+              <option value="tag_vip">⭐ Etiqueta: VIP / Inversionistas</option>
+              <option value="channel_whatsapp">💬 Canal: WhatsApp</option>
             </select>
           </div>
           <div class="field" style="flex:0 0 160px;">
-            <label>Destinatarios Calificados</label>
-            <div id="bcastRecipientCount" style="padding:10px; font-weight:800; color:var(--gold); font-size:16px;">0 contactos</div>
+            <label>Destinatarios</label>
+            <div id="bcastRecipientCount" style="padding:9px 12px; font-weight:800; color:var(--gold); font-size:15px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px;">0 contactos</div>
           </div>
         </div>
 
+        <!-- Plantillas Rápidas con 1 Clic -->
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 6px;">
+          <span style="font-size:12px; color:var(--text-muted); align-self:center; font-weight:600;">Plantillas rápidas:</span>
+          <button type="button" class="ghost small" id="btnBcastTplPriceDrop">🏷️ ¡Bajó de precio!</button>
+          <button type="button" class="ghost small" id="btnBcastTplNewProp">🏡 Nueva propiedad similar</button>
+          <button type="button" class="ghost small" id="btnBcastTplFollowup">👋 Reactivación general</button>
+        </div>
+
         <div class="field" style="margin:10px 0;">
-          <label>Mensaje de la Campaña (Admite variables {{nombre}}, {{propiedad}}, {{precio}})</label>
+          <label>Mensaje de la Campaña (Variables: <code>{{nombre}}</code>, <code>{{propiedad}}</code>, <code>{{precio}}</code>)</label>
           <textarea id="bcastMessageText" rows="4" placeholder="Hola {{nombre}}, tenemos novedades exclusivas sobre propiedades en cartera..."></textarea>
         </div>
 
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="primary" id="btnLaunchBroadcast">🚀 Lanzar Difusión masiva</button>
-          <button type="button" class="ghost" id="btnPreviewBroadcastRecipients">👁️ Ver Destinatarios</button>
+          <button type="button" class="ghost" id="btnPreviewBroadcastRecipients">👁️ Ver y Seleccionar Destinatarios</button>
         </div>
 
         <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:14px;">
@@ -2223,17 +2264,31 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
         <div class="crm-page-head">
           <div>
             <h3>💰 Retorno de Inversión (ROI) y Costo por Lead por Portal</h3>
-            <div class="hint">Compara cuánto inviertes en TocToc, Yapo, Portal Inmobiliario o Meta Ads vs. los honorarios generados.</div>
+            <div class="hint">Compara cuánto inviertes en TocToc, Yapo, Portal Inmobiliario o Meta Ads vs. los honorarios generados. Haz clic y edita directamente los montos en la tabla.</div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="primary small" id="btnAutoSyncRoiFromLeads">🔄 Auto-calcular Leads desde Cartera</button>
+            <button type="button" class="ghost small" id="btnAddRoiPortalRow">+ Agregar Canal</button>
+            <button type="button" class="ghost small" id="btnResetRoiDefaults">↩️ Valores por defecto</button>
           </div>
         </div>
 
         <div class="stat-grid" id="roiOverviewGrid" style="margin-bottom:16px;"></div>
 
-        <h4 style="margin:0 0 10px; font-size:14px;">Inversión Mensual por Canal vs. Ventas Cerradas</h4>
+        <h4 style="margin:0 0 10px; font-size:14px;">Inversión Mensual por Canal vs. Ventas Cerradas (Edita directamente cualquier valor)</h4>
         <div style="overflow-x:auto;">
           <table class="kommo-table" id="roiPortalTable">
             <thead>
-              <tr><th>Portal / Canal</th><th>Inversión Mensual ($)</th><th>Leads Generados</th><th>Costo por Lead (CPL)</th><th>Ventas Cerradas</th><th>Honorarios Ganados</th><th>ROI (%)</th></tr>
+              <tr>
+                <th>Portal / Canal</th>
+                <th>Inversión Mensual ($)</th>
+                <th>Leads Generados</th>
+                <th>Costo por Lead (CPL)</th>
+                <th>Ventas Cerradas</th>
+                <th>Honorarios Ganados ($)</th>
+                <th>ROI (%)</th>
+                <th>Acción</th>
+              </tr>
             </thead>
             <tbody id="roiPortalTableBody"></tbody>
           </table>
@@ -2568,15 +2623,15 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
           </div>
         </div>
         <div class="card">
-          <div class="crm-page-head"><div><h3>🔌 Centro de integraciones</h3><div class="hint">Estado de los canales conectados a este CRM.</div></div></div>
+          <div class="crm-page-head"><div><h3>🔌 Centro de integraciones</h3><div class="hint">Estado y conexión de los canales. Haz clic en cualquiera para abrir su panel de configuración.</div></div></div>
           <div class="kommo-integrations-grid">
-            <div class="kommo-integration-card"><div class="ic-icon">🌐</div><div class="ic-name">Portales inmobiliarios</div><span class="ic-status ok">Instalado</span></div>
-            <div class="kommo-integration-card"><div class="ic-icon">📱</div><div class="ic-name">WhatsApp</div><span class="ic-status locked" id="icStatusWhatsApp">Instalar</span></div>
-            <div class="kommo-integration-card"><div class="ic-icon">📸</div><div class="ic-name">Instagram</div><span class="ic-status locked">Instalar</span></div>
-            <div class="kommo-integration-card"><div class="ic-icon">📘</div><div class="ic-name">Facebook</div><span class="ic-status locked">Instalar</span></div>
-            <div class="kommo-integration-card"><div class="ic-icon">✉️</div><div class="ic-name">Correo</div><span class="ic-status locked" id="icStatusEmail">Instalar</span></div>
+            <div class="kommo-integration-card" id="cardIntegPortales" style="cursor:pointer;" title="Configurar feeds y portales"><div class="ic-icon">🌐</div><div class="ic-name">Portales inmobiliarios</div><span class="ic-status ok">Configurar</span></div>
+            <div class="kommo-integration-card" id="cardIntegWhatsApp" style="cursor:pointer;" title="Configurar conexión WhatsApp Cloud API"><div class="ic-icon">📱</div><div class="ic-name">WhatsApp API</div><span class="ic-status ok" id="icStatusWhatsApp">Configurar</span></div>
+            <div class="kommo-integration-card" id="cardIntegInstagram" style="cursor:pointer;" title="Configurar Instagram Direct & Meta"><div class="ic-icon">📸</div><div class="ic-name">Instagram</div><span class="ic-status locked" id="icStatusInstagram">Configurar</span></div>
+            <div class="kommo-integration-card" id="cardIntegFacebook" style="cursor:pointer;" title="Configurar Facebook Lead Ads"><div class="ic-icon">📘</div><div class="ic-name">Facebook Ads</div><span class="ic-status locked" id="icStatusFacebook">Configurar</span></div>
+            <div class="kommo-integration-card" id="cardIntegEmail" style="cursor:pointer;" title="Configurar Titan Mail IMAP"><div class="ic-icon">✉️</div><div class="ic-name">Correo Titan</div><span class="ic-status ok" id="icStatusEmail">Configurar</span></div>
           </div>
-          <div style="margin-top:10px;"><a class="ke-link" data-app-view-link="crm-sources">Configurar filtros de correo →</a></div>
+          <div style="margin-top:10px;"><a class="ke-link" data-app-view-link="crm-sources">Configurar filtros de correo y portales →</a></div>
         </div>
         <div class="card">
           <div class="crm-page-head"><div><h3>💾 Copias de seguridad</h3><div class="hint">Respalda o restaura toda la información del CRM.</div></div></div>
@@ -2592,15 +2647,77 @@ body.sidebar-collapsed .main-wrapper{ margin-left:68px; width:calc(100% - 68px);
 
     <div class="crm-view" id="crm-notifications">
       <div class="card">
-        <div class="crm-page-head"><div><h3>🔔 Centro de notificaciones</h3><div class="hint">Clientes que escribieron por correo/portal y esperan primer contacto.</div></div></div>
+        <div class="crm-page-head">
+          <div>
+            <h3>🔔 Centro de notificaciones</h3>
+            <div class="hint">Avisos urgentes, mensajes entrantes de WhatsApp y prospectos esperando atención.</div>
+          </div>
+          <button type="button" class="ghost small" id="btnClearAllNotifications">Marcar todo como visto</button>
+        </div>
         <div id="crmNotificationsList"></div>
       </div>
     </div>
 
     <div class="crm-view" id="crm-help">
       <div class="card">
-        <div class="crm-page-head"><div><h3>❓ Ayuda</h3></div></div>
-        <div class="hint">¿Dudas sobre cómo usar el CRM? Revisa cada sección desde el menú lateral: Pipelines para el seguimiento diario, Listas → Productos para gestionar propiedades, y Automatizaciones → Plantillas para tus mensajes rápidos.</div>
+        <div class="crm-page-head">
+          <div>
+            <h3>📖 Manual Operativo & Guía Práctica Inmobiliaria Cima</h3>
+            <div class="hint">Guía paso a paso para asesoras, captadoras y administración. Todo lo necesario para operar el CRM con máxima eficiencia.</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px; margin-top:14px;">
+          <div class="crm-source-card" style="text-align:left; padding:16px;">
+            <div style="font-size:24px; margin-bottom:6px;">🚀</div>
+            <strong style="font-size:15px; color:var(--gold);">1. Circuito Diario del Lead</strong>
+            <p style="font-size:12.5px; line-height:1.5; color:var(--text-muted); margin:6px 0 0;">
+              Cuando entra una consulta desde TocToc, Yapo o WhatsApp, se crea automáticamente en <strong>Primer Contacto</strong>. La captadora asignada debe responder en menos de 15 minutos para asegurar una alta tasa de conversión.
+            </p>
+          </div>
+
+          <div class="crm-source-card" style="text-align:left; padding:16px;">
+            <div style="font-size:24px; margin-bottom:6px;">🚦</div>
+            <strong style="font-size:15px; color:var(--green);">2. Semáforo SLA de Tiempos</strong>
+            <p style="font-size:12.5px; line-height:1.5; color:var(--text-muted); margin:6px 0 0;">
+              <strong>🟢 Verde (&lt;24 hrs):</strong> Contacto fresco y prioritario.<br>
+              <strong>🟡 Amarillo (24-48 hrs):</strong> Alerta de seguimiento.<br>
+              <strong>🔴 Rojo (&gt;48 hrs):</strong> Lead frío. Se activa la secuencia Drip para recuperarlo antes de que compre en otra parte.
+            </p>
+          </div>
+
+          <div class="crm-source-card" style="text-align:left; padding:16px;">
+            <div style="font-size:24px; margin-bottom:6px;">📱</div>
+            <strong style="font-size:15px; color:var(--gold);">3. WhatsApp y Respuestas Rápidas</strong>
+            <p style="font-size:12.5px; line-height:1.5; color:var(--text-muted); margin:6px 0 0;">
+              Usa los atajos configurados en <em>Automatizaciones → Plantillas</em> (como <code>/saludo</code>, <code>/visita</code>, <code>/requisitos</code>). El CRM enlaza directo con WhatsApp Web y WhatsApp Desktop sin almacenar números personales en tu teléfono.
+            </p>
+          </div>
+
+          <div class="crm-source-card" style="text-align:left; padding:16px;">
+            <div style="font-size:24px; margin-bottom:6px;">📅</div>
+            <strong style="font-size:15px; color:var(--gold);">4. Agenda de Visitas a Terreno</strong>
+            <p style="font-size:12.5px; line-height:1.5; color:var(--text-muted); margin:6px 0 0;">
+              Al coordinar una visita, haz clic en el contacto dentro de <strong>Calendario</strong>. Puedes guardarla en el CRM, sincronizarla con tu <strong>Google Calendar</strong> personal en 1 clic y enviar la confirmación formal al cliente.
+            </p>
+          </div>
+
+          <div class="crm-source-card" style="text-align:left; padding:16px;">
+            <div style="font-size:24px; margin-bottom:6px;">💰</div>
+            <strong style="font-size:15px; color:var(--gold);">5. Cierre, Comisiones y Liquidación</strong>
+            <p style="font-size:12.5px; line-height:1.5; color:var(--text-muted); margin:6px 0 0;">
+              Al firmar la promesa, mueve el lead a <strong>Se firmó Promesa</strong> y luego a <strong>Vendido</strong>. El sistema calcula automáticamente la comisión del 2% y genera la liquidación formal por captadora en <em>Insights → Ganancias y Pérdidas</em>.
+            </p>
+          </div>
+
+          <div class="crm-source-card" style="text-align:left; padding:16px;">
+            <div style="font-size:24px; margin-bottom:6px;">🤖</div>
+            <strong style="font-size:15px; color:var(--gold);">6. Bots y Cuándo Intervenir</strong>
+            <p style="font-size:12.5px; line-height:1.5; color:var(--text-muted); margin:6px 0 0;">
+              Los Salesbots atienden consultas iniciales las 24 horas. Si el cliente pide hablar con una persona, hace una contraoferta o pide llamada urgente, la IA pausa el bot y emite una alerta con sonido prioritario para que intervengas de inmediato.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -7476,7 +7593,7 @@ function renderCRMCalendar(){
     const isToday=iso===today;
     cells+=`<div class="kommo-cal-day${out?' out':''}${isToday?' today':''}" data-cal-day="${iso}">
       <div class="d-num">${d.getDate()}</div>
-      ${items.slice(0,2).map(l=>`<div class="d-item">${escapeHtml(l.name||'Lead')}</div>`).join('')}
+      ${items.slice(0,2).map(l=>`<div class="d-item" data-cal-lead-id="${escapeAttr(l.id)}" title="Clic para ver, editar o sincronizar con Google Calendar">${escapeHtml(l.name||'Lead')}</div>`).join('')}
       ${items.length>2?`<div class="d-more">+${items.length-2} más</div>`:''}
     </div>`;
   }
@@ -7485,32 +7602,307 @@ function renderCRMCalendar(){
     window.crmCalendarSelectedDay=cell.dataset.calDay;
     renderCRMCalendarDayList();
   }));
+  gridEl.querySelectorAll('.d-item[data-cal-lead-id]').forEach(item=>{
+    item.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openCalendarEventModal(item.dataset.calLeadId);
+    });
+  });
   renderCRMCalendarDayList();
 }
+
 function renderCRMCalendarDayList(){
   const listEl=document.getElementById('crmCalDayList'); if(!listEl) return;
   const iso=window.crmCalendarSelectedDay||todayISO();
   const leads=(state.leads||[]).filter(l=>l.nextContact===iso && !stageIsClosed(l.stage));
   const label=new Date(iso+'T00:00:00').toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});
+  
+  const headerHtml = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin:10px 0 12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+      <h4 style="margin:0; font-size:14px; color:var(--text); text-transform:capitalize;">📅 ${escapeHtml(label)}</h4>
+      <button type="button" class="primary small" id="btnCalDayAddEvent" style="padding:4px 10px; font-size:12px;">+ Agendar en este día</button>
+    </div>`;
+
   if(!leads.length){
-    listEl.innerHTML=`<h4 style="margin:0 0 8px;font-size:13.5px;color:var(--text);text-transform:capitalize;">${escapeHtml(label)}</h4><div class="crm-empty">No hay contactos agendados este día.</div>`;
+    listEl.innerHTML=headerHtml + `<div class="crm-empty" style="padding:16px;">No hay contactos ni visitas agendadas este día.</div>`;
+    listEl.querySelector('#btnCalDayAddEvent')?.addEventListener('click', ()=>openCalendarEventModal(null, iso));
     return;
   }
-  listEl.innerHTML=`<h4 style="margin:0 0 8px;font-size:13.5px;color:var(--text);text-transform:capitalize;">${escapeHtml(label)}</h4>`+leads.map(l=>renderLeadCard(l,true)).join('');
-  bindLeadActions(listEl);
+
+  listEl.innerHTML=headerHtml + leads.map(l=>{
+    const timeStr = l.meetingTime || '11:00';
+    return `
+      <div class="crm-source-card" style="text-align:left; margin-bottom:8px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-left:3px solid var(--gold);">
+        <div style="flex:1 1 240px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <strong style="font-size:14px;">${escapeHtml(l.name||'Sin nombre')}</strong>
+            <span class="hint" style="font-size:11.5px; background:var(--bg-panel-2); padding:1px 6px; border-radius:6px;">🕒 ${timeStr} hrs</span>
+            <span class="hint">(${escapeHtml(l.stage)})</span>
+          </div>
+          <div class="hint" style="margin:3px 0 0; font-size:12px;">🏠 ${escapeHtml(l.property||'Interés general')} · 📞 ${escapeHtml(l.phone||'Sin fono')}</div>
+          ${l.notes ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">📝 ${escapeHtml(l.notes.slice(0, 90))}</div>` : ''}
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" class="primary small" data-cal-edit-lead="${escapeAttr(l.id)}">📅 Editar / Google Cal</button>
+          ${l.phone ? `<a href="https://wa.me/${String(l.phone).replace(/\D/g,'')}" target="_blank" class="ghost small" style="text-decoration:none; padding:4px 8px;">💬 WhatsApp</a>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  listEl.querySelector('#btnCalDayAddEvent')?.addEventListener('click', ()=>openCalendarEventModal(null, iso));
+  listEl.querySelectorAll('[data-cal-edit-lead]').forEach(btn=>{
+    btn.addEventListener('click', ()=>openCalendarEventModal(btn.dataset.calEditLead, iso));
+  });
 }
+
 document.getElementById('crmCalPrev')?.addEventListener('click', ()=>{ window.crmCalendarMonth=new Date(window.crmCalendarMonth.getFullYear(),window.crmCalendarMonth.getMonth()-1,1); renderCRMCalendar(); });
 document.getElementById('crmCalNext')?.addEventListener('click', ()=>{ window.crmCalendarMonth=new Date(window.crmCalendarMonth.getFullYear(),window.crmCalendarMonth.getMonth()+1,1); renderCRMCalendar(); });
 document.getElementById('crmCalToday')?.addEventListener('click', ()=>{ const n=new Date(); window.crmCalendarMonth=new Date(n.getFullYear(),n.getMonth(),1); window.crmCalendarSelectedDay=todayISO(); renderCRMCalendar(); });
+document.getElementById('btnOpenAddCalendarEvent')?.addEventListener('click', ()=>{ openCalendarEventModal(null, window.crmCalendarSelectedDay || todayISO()); });
 
+// ==================== MODAL DE CALENDARIO & GOOGLE CALENDAR ====================
+function openCalendarEventModal(leadId, targetDate) {
+  let modal = document.getElementById('calendarEventModalOverlay');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'calendarEventModalOverlay';
+    modal.className = 'cima-modal-overlay';
+    modal.innerHTML = `
+      <div class="cima-modal" style="max-width:480px; text-align:left; padding:22px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+          <h3 style="margin:0; font-size:16px;">📅 Agendar / Editar Cita en Calendario</h3>
+          <button type="button" class="ghost small" id="btnCloseCalModal">✕</button>
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>Cliente / Contacto</label>
+          <select id="calEvLeadSelect" style="width:100%;"></select>
+        </div>
+        <div class="row" style="gap:10px; margin-bottom:12px;">
+          <div class="field" style="flex:1 1 140px;">
+            <label>Fecha de la Cita / Visita</label>
+            <input type="date" id="calEvDate">
+          </div>
+          <div class="field" style="flex:1 1 100px;">
+            <label>Hora</label>
+            <input type="time" id="calEvTime" value="11:00">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>Tipo de Evento</label>
+          <select id="calEvType">
+            <option value="Visita a terreno">🏡 Visita a terreno</option>
+            <option value="Llamada de seguimiento">📞 Llamada de seguimiento</option>
+            <option value="Firma de promesa">✍️ Firma de promesa / reserva</option>
+            <option value="Reunión en oficina">🏢 Reunión en oficina</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>Propiedad de interés o Dirección</label>
+          <input type="text" id="calEvProperty" placeholder="Ej: Casa en San Pedro o Depto Centro">
+        </div>
+        <div class="field" style="margin-bottom:16px;">
+          <label>Notas de la cita</label>
+          <textarea id="calEvNotes" rows="3" placeholder="Detalles de la cita, acuerdos o indicaciones..."></textarea>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button type="button" class="primary" id="btnSaveCalEvent">💾 Guardar Cambios en Agenda</button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="ghost" id="btnSyncGoogleCalendar" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+              <span style="font-size:15px;">📅</span> Google Calendar
+            </button>
+            <button type="button" class="ghost" id="btnExportCalIcs" style="flex:1;">📥 Descargar .ICS</button>
+          </div>
+          <button type="button" class="ghost small" id="btnSendCalWhatsApp" style="color:var(--green); margin-top:2px;">💬 Enviar confirmación por WhatsApp</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    document.getElementById('btnCloseCalModal')?.addEventListener('click', ()=>modal.classList.remove('active'));
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.classList.remove('active'); });
+
+    document.getElementById('btnSaveCalEvent')?.addEventListener('click', ()=>{
+      const select = document.getElementById('calEvLeadSelect');
+      const lead = (state.leads||[]).find(l=>l.id===select?.value);
+      if(!lead){ showToast('Selecciona un cliente'); return; }
+      const d = document.getElementById('calEvDate')?.value || todayISO();
+      const t = document.getElementById('calEvTime')?.value || '11:00';
+      const type = document.getElementById('calEvType')?.value || 'Cita';
+      const prop = document.getElementById('calEvProperty')?.value || '';
+      const notes = document.getElementById('calEvNotes')?.value || '';
+
+      lead.nextContact = d;
+      lead.meetingTime = t;
+      lead.meetingType = type;
+      if(prop) lead.property = prop;
+      if(notes) lead.notes = (lead.notes ? lead.notes + '\n' : '') + `[${d} ${t}]: ${type} - ${notes}`;
+      lead.updatedAt = Date.now();
+      persistLead(lead);
+      modal.classList.remove('active');
+      renderCRMCalendar();
+      showToast('Cita guardada y agendada exitosamente ✅');
+    });
+
+    document.getElementById('btnSyncGoogleCalendar')?.addEventListener('click', ()=>{
+      const select = document.getElementById('calEvLeadSelect');
+      const lead = (state.leads||[]).find(l=>l.id===select?.value);
+      const d = document.getElementById('calEvDate')?.value || todayISO();
+      const t = document.getElementById('calEvTime')?.value || '11:00';
+      const type = document.getElementById('calEvType')?.value || 'Cita';
+      const prop = document.getElementById('calEvProperty')?.value || lead?.property || 'Cima Propiedades';
+      const notes = document.getElementById('calEvNotes')?.value || '';
+      const name = lead?.name || 'Cliente';
+
+      const sHour = t.split(':')[0] || '11';
+      const sMin = t.split(':')[1] || '00';
+      const eHour = String(Number(sHour) + 1).padStart(2, '0');
+      const startIso = d.replace(/-/g, '') + 'T' + sHour + sMin + '00';
+      const endIso = d.replace(/-/g, '') + 'T' + eHour + sMin + '00';
+
+      const gTitle = encodeURIComponent(`${type}: ${name} - ${prop}`);
+      const gDetails = encodeURIComponent(`Cita programada desde CRM Cima.\nCliente: ${name}\nTeléfono: ${lead?.phone || 'No registrado'}\nPropiedad: ${prop}\nNotas: ${notes}`);
+      const gLoc = encodeURIComponent(prop || 'Concepción, Chile');
+      const gUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${gTitle}&dates=${startIso}/${endIso}&details=${gDetails}&location=${gLoc}`;
+      window.open(gUrl, '_blank');
+      showToast('Abriendo Google Calendar para sincronizar 📅');
+    });
+
+    document.getElementById('btnExportCalIcs')?.addEventListener('click', ()=>{
+      const select = document.getElementById('calEvLeadSelect');
+      const lead = (state.leads||[]).find(l=>l.id===select?.value);
+      const d = document.getElementById('calEvDate')?.value || todayISO();
+      const t = document.getElementById('calEvTime')?.value || '11:00';
+      const type = document.getElementById('calEvType')?.value || 'Cita';
+      const prop = document.getElementById('calEvProperty')?.value || lead?.property || 'Cima Propiedades';
+      const name = lead?.name || 'Cliente';
+
+      const sHour = t.split(':')[0] || '11';
+      const sMin = t.split(':')[1] || '00';
+      const eHour = String(Number(sHour) + 1).padStart(2, '0');
+      const startIso = d.replace(/-/g, '') + 'T' + sHour + sMin + '00';
+      const endIso = d.replace(/-/g, '') + 'T' + eHour + sMin + '00';
+
+      const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Cima Propiedades CRM//CL\nBEGIN:VEVENT\nSUMMARY:${type}: ${name} - ${prop}\nDTSTART:${startIso}\nDTEND:${endIso}\nDESCRIPTION:Cita de ${type} con ${name}. Tel: ${lead?.phone || ''}\nLOCATION:${prop}\nSTATUS:CONFIRMED\nEND:VEVENT\nEND:VCALENDAR`;
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `cita-${name.replace(/\s+/g,'_')}-${d}.ics`;
+      link.click();
+      showToast('Archivo de calendario .ICS descargado 📥');
+    });
+
+    document.getElementById('btnSendCalWhatsApp')?.addEventListener('click', ()=>{
+      const select = document.getElementById('calEvLeadSelect');
+      const lead = (state.leads||[]).find(l=>l.id===select?.value);
+      if(!lead || !lead.phone){ showToast('El cliente no tiene teléfono registrado'); return; }
+      const d = document.getElementById('calEvDate')?.value || todayISO();
+      const t = document.getElementById('calEvTime')?.value || '11:00';
+      const type = document.getElementById('calEvType')?.value || 'Visita';
+      const prop = document.getElementById('calEvProperty')?.value || lead.property || 'la propiedad de tu interés';
+      const msg = encodeURIComponent(`Hola ${lead.name || ''}, junto con saludar te confirmamos tu ${type} para el día ${d} a las ${t} hrs en "${prop}". ¿Te acomoda este horario? ¡Quedamos muy atentos! — Cima Propiedades`);
+      const waUrl = `https://wa.me/${String(lead.phone).replace(/\D/g,'')}?text=${msg}`;
+      window.open(waUrl, '_blank');
+    });
+  }
+
+  // Populate leads dropdown
+  const sel = document.getElementById('calEvLeadSelect');
+  if (sel) {
+    sel.innerHTML = '<option value="">-- Seleccionar cliente de la cartera --</option>' + 
+      (state.leads||[]).map(l=>`<option value="${escapeAttr(l.id)}">${escapeHtml(l.name||'Sin nombre')} (${escapeHtml(l.phone||'Sin fono')}) - ${escapeHtml(l.property||'General')}</option>`).join('');
+    if(leadId) sel.value = leadId;
+  }
+
+  const activeLead = leadId ? (state.leads||[]).find(l=>l.id===leadId) : null;
+  document.getElementById('calEvDate').value = targetDate || activeLead?.nextContact || window.crmCalendarSelectedDay || todayISO();
+  document.getElementById('calEvTime').value = activeLead?.meetingTime || '11:00';
+  document.getElementById('calEvProperty').value = activeLead?.property || '';
+  document.getElementById('calEvNotes').value = activeLead?.notes || '';
+  if (activeLead?.meetingType) document.getElementById('calEvType').value = activeLead.meetingType;
+
+  modal.classList.add('active');
+}
+
+// ==================== CENTRO DE NOTIFICACIONES UNIFICADO ====================
 function renderCRMNotifications(){
   const list=document.getElementById('crmNotificationsList'); if(!list) return;
-  const pending=getPendingPortalLeads();
-  if(!pending.length){ list.innerHTML='<div class="crm-empty">🎉 No tienes notificaciones pendientes.</div>'; return; }
-  list.innerHTML=pending.map(l=>`<div class="kommo-notif-item">
-    <div class="kommo-notif-icon">📧</div>
-    <div class="kommo-notif-text"><strong>${escapeHtml(l.name||'Sin nombre')}</strong> escribió por ${escapeHtml(l.channel||'portal')} y espera primer contacto${l.property?` · ${escapeHtml(l.property)}`:''}</div>
-  </div>`).join('');
+  const items = [];
+
+  // 1. Leads pendientes de primer contacto
+  (getPendingPortalLeads() || []).forEach(l => {
+    items.push({
+      type: 'portal',
+      icon: '📧',
+      title: `${l.name || 'Cliente'} escribió por ${l.channel || 'portal'}`,
+      sub: `${l.property ? `Interés en "${l.property}" · ` : ''}Espera primer contacto`,
+      leadId: l.id,
+      phone: l.phone,
+      action: 'primer_contacto'
+    });
+  });
+
+  // 2. Leads que requieren intervención humana según la IA/Bots
+  (state.leads || []).forEach(l => {
+    if (l.humanAttentionRequired || (l.tags && l.tags.some(t => t.includes('Atención Humana')))) {
+      items.push({
+        type: 'bot_alert',
+        icon: '🚨',
+        title: `Intervención humana requerida: ${l.name || 'Cliente'}`,
+        sub: l.humanAttentionReason || 'El cliente realizó una contraoferta o solicitó hablar con una persona.',
+        leadId: l.id,
+        phone: l.phone,
+        action: 'chat'
+      });
+    }
+  });
+
+  // 3. Leads con SLA vencido (>48h)
+  (state.leads || []).forEach(l => {
+    if (!stageIsClosed(l.stage)) {
+      const diff = daysBetween(l.lastContact || l.firstContact || todayISO(), todayISO());
+      if (diff >= 3) {
+        items.push({
+          type: 'sla_overdue',
+          icon: '⏰',
+          title: `SLA vencido (${diff} días sin contacto): ${l.name || 'Cliente'}`,
+          sub: `Etapa: ${l.stage} · Propiedad: ${l.property || 'General'}. Conviene reactivar por WhatsApp.`,
+          leadId: l.id,
+          phone: l.phone,
+          action: 'drip'
+        });
+      }
+    }
+  });
+
+  if (!items.length) {
+    list.innerHTML = '<div class="crm-empty" style="padding:28px;">🎉 ¡Al día! No tienes notificaciones ni alertas pendientes en tu cartera.</div>';
+    return;
+  }
+
+  list.innerHTML = items.slice(0, 25).map(item => `
+    <div class="kommo-notif-item" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border); gap:10px;">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <div class="kommo-notif-icon" style="font-size:20px; line-height:1;">${item.icon}</div>
+        <div class="kommo-notif-text">
+          <strong>${escapeHtml(item.title)}</strong>
+          <div class="hint" style="margin-top:2px;">${escapeHtml(item.sub)}</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        ${item.phone ? `<a href="https://wa.me/${String(item.phone).replace(/\D/g,'')}" target="_blank" class="primary small" style="text-decoration:none; padding:4px 8px;">💬 WhatsApp</a>` : ''}
+        <button type="button" class="ghost small" onclick="openLeadEditor(state.leads.find(l=>l.id==='${item.leadId}'))">👁️ Ficha</button>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('btnClearAllNotifications')?.addEventListener('click', ()=>{
+    (state.leads||[]).forEach(l=>{
+      l.humanAttentionRequired = false;
+      if(l.tags) l.tags = l.tags.filter(t=>!t.includes('Atención Humana'));
+    });
+    renderCRMNotifications();
+    updateSideNotifBadge();
+    showToast('Notificaciones marcadas como revisadas ✅');
+  });
 }
 function updateSideNotifBadge(){
   const badge=document.getElementById('sideNotifBadge'); if(!badge) return;
@@ -7698,7 +8090,7 @@ const crmViewTitles = {
   'crm-all-leads': {title:'Todos los leads', sub:'Vista de lista de toda tu cartera'},
   'crm-calendar': {title:'Calendario', sub:'Próximos contactos agendados por día'},
   'crm-segments': {title:'Segmentos', sub:'Públicos dinámicos por etapa, etiqueta y canal'},
-  'crm-companies': {title:'Compañías', sub:'Empresas asociadas a tus contactos'},
+  'crm-automations': {title:'Secuencias Drip (Leads Fríos)', sub:'Reactivación automática de prospectos sin interacción reciente'},
   'crm-ai-agent': {title:'Agente de IA', sub:'Asistente automático para tus leads'},
   'crm-bots': {title:'Bots', sub:'Automatiza chats y tareas'},
   'crm-broadcasts': {title:'Difusiones', sub:'Mensajes masivos a contactos filtrados'},
@@ -7708,7 +8100,7 @@ const crmViewTitles = {
   'crm-goals-report': {title:'Reporte de objetivos', sub:'Metas de ventas del equipo vs. resultado real'},
   'crm-settings': {title:'Ajustes', sub:'Perfil, integraciones y copias de seguridad'},
   'crm-notifications': {title:'Centro de notificaciones', sub:'Avisos pendientes de tu cartera'},
-  'crm-help': {title:'Ayuda', sub:'Cómo moverte por el CRM'}
+  'crm-help': {title:'Ayuda', sub:'Manual de uso y guía práctica inmobiliaria'}
 };
 document.querySelectorAll('.crm-view-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -9136,6 +9528,9 @@ function wireEmailFolderTabs(box){
   box.querySelector('#btnRefreshEmailInbox')?.addEventListener('click', ()=>{
     renderCRMInboxEmail();
   });
+  box.querySelector('#btnScanInboxWithAi')?.addEventListener('click', ()=>{
+    scanInboxWithAiForPortalLeads(false);
+  });
 }
 
 async function renderCRMInboxEmailFolder(box, recibidosCount){
@@ -10070,37 +10465,83 @@ function renderDripColdLeads() {
   const mount = document.getElementById('coldLeadsDripList');
   if (!mount) return;
 
+  const daysVal = document.getElementById('dripDaysFilter')?.value || '7';
+  const agentVal = document.getElementById('dripAgentFilter')?.value || 'all';
+
+  // Poblar selector de agentes si aún no está lleno
+  const agentSelect = document.getElementById('dripAgentFilter');
+  if (agentSelect && agentSelect.options.length <= 1 && Array.isArray(teamMembersDirectory)) {
+    teamMembersDirectory.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id || a.username;
+      opt.textContent = a.display_name || a.username;
+      agentSelect.appendChild(opt);
+    });
+  }
+
   const cold = (state.leads || []).filter(l => {
     if (stageIsClosed(l.stage)) return false;
     const diff = daysBetween(l.lastContact || l.firstContact || todayISO(), todayISO());
-    return diff >= 3;
+    if (daysVal !== 'all' && diff < Number(daysVal)) return false;
+    if (agentVal !== 'all' && l.assigned_to !== agentVal && l.assignedTo !== agentVal) return false;
+    return true;
   });
 
+  const countBadge = document.getElementById('dripColdCountBadge');
+  if (countBadge) countBadge.textContent = `${cold.length} leads`;
+
   if (!cold.length) {
-    mount.innerHTML = '<div class="empty-hint">🎉 No hay leads fríos pendientes de reactivación.</div>';
+    mount.innerHTML = '<div class="crm-empty" style="padding:28px;">🎉 ¡Excelente! No hay prospectos fríos que coincidan con estos filtros.</div>';
     return;
   }
 
   mount.innerHTML = cold.map(l => {
     const diff = daysBetween(l.lastContact || l.firstContact || todayISO(), todayISO());
-    const msg = encodeURIComponent(`Hola ${l.name || ''}, te escribo de Cima Propiedades. Quería consultar si sigues interesado en buscar propiedad o si tienes alguna duda. ¡Quedo muy atento!`);
+    const urgencyBadge = diff >= 14 ? '<span style="background:var(--red-bg);color:var(--red);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🔴 Crítico (>14d)</span>'
+                       : (diff >= 7 ? '<span style="background:var(--orange-bg, rgba(234,179,8,0.15));color:var(--orange, #f59e0b);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🟠 Frío (>7d)</span>'
+                       : '<span style="background:var(--yellow-bg, rgba(234,179,8,0.1));color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">🟡 En seguimiento</span>');
+    const msg = encodeURIComponent(`Hola ${l.name || ''}, te escribo de Cima Propiedades respecto a tu consulta por "${l.property || 'propiedades en cartera'}". ¿Sigues interesado en buscar o ya encontraste alternativas? ¡Quedo muy atento para ayudarte!`);
     const wa = l.phone ? `https://wa.me/${String(l.phone).replace(/\D/g, '')}?text=${msg}` : '#';
+
     return `
-      <div class="match-row-item">
-        <div>
-          <strong>${sanitize(l.name || 'Sin nombre')}</strong> · <span class="hint">Sin contacto hace ${diff} días (${l.stage})</span>
-          <div class="hint" style="margin:2px 0 0;">🏠 ${sanitize(l.property || 'Interés general')} · 📞 ${sanitize(l.phone || 'Sin fono')}</div>
+      <div class="match-row-item" style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-panel); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:8px; flex-wrap:wrap; gap:10px;">
+        <div style="flex:1 1 260px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <strong style="font-size:14px;">${sanitize(l.name || 'Sin nombre')}</strong>
+            ${urgencyBadge}
+            <span style="font-size:12px; color:var(--text-muted);">${diff} días sin contacto · Etapa: <strong>${l.stage}</strong></span>
+          </div>
+          <div class="hint" style="margin:4px 0 0; font-size:12px;">
+            🏠 Interés: <strong>${sanitize(l.property || 'Búsqueda general')}</strong> · 📞 ${sanitize(l.phone || 'Sin fono')} ${l.email ? `· ✉️ ${sanitize(l.email)}` : ''}
+          </div>
         </div>
-        <div>
-          ${l.phone ? `<a href="${safeUrl(wa)}" target="_blank" class="primary small" style="text-decoration:none; padding:4px 9px;">💬 Reactivar por WhatsApp</a>` : ''}
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          ${l.phone ? `<a href="${safeUrl(wa)}" target="_blank" class="primary small" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:6px 10px;">💬 Reactivar WhatsApp</a>` : ''}
+          <button type="button" class="ghost small" onclick="openCalendarEventModal('${l.id}')">📅 Agendar Cita</button>
+          <button type="button" class="ghost small" onclick="markLeadDesistio('${l.id}')" title="Marcar como desistió">❌ Desistió</button>
         </div>
       </div>`;
   }).join('');
 }
 
+function markLeadDesistio(leadId) {
+  const lead = (state.leads || []).find(l => l.id === leadId);
+  if (!lead) return;
+  if (!confirm(`¿Mover a "${lead.name}" a la etapa "Desistió"?`)) return;
+  lead.stage = 'Desistió';
+  lead.updatedAt = Date.now();
+  persistLead(lead);
+  renderDripColdLeads();
+  renderCRM();
+  showToast('Lead actualizado a Desistió');
+}
+
+document.getElementById('dripDaysFilter')?.addEventListener('change', renderDripColdLeads);
+document.getElementById('dripAgentFilter')?.addEventListener('change', renderDripColdLeads);
+document.getElementById('btnRefreshDripList')?.addEventListener('click', renderDripColdLeads);
 document.getElementById('btnRunDripSequences')?.addEventListener('click', () => {
   renderDripColdLeads();
-  showToast('Secuencias de reactivación ejecutadas ✅');
+  showToast('⚡ Secuencias de reactivación revisadas y ejecutadas con éxito');
 });
 
 // ==================== ALERTA PROACTIVA DE MATCHING ====================
@@ -10176,7 +10617,7 @@ if ('serviceWorker' in navigator) {
 
 // ==================== LÓGICA ROADMAP V3.0 ====================
 
-// --- BOTS: SIMULADOR INTERACTIVO ---
+// --- BOTS: SIMULADOR INTERACTIVO CON IA & COMPRENSIÓN DE TEXTO ---
 let activeSimBotType = 'Bienvenida';
 let botSimStep = 0;
 
@@ -10188,18 +10629,58 @@ function openBotSimulator(botType) {
   
   if (botType === 'Bienvenida') {
     mount.innerHTML = `
-      <div class="wa-bubble in"><span class="wa-sender">🤖 Salesbot Cima</span>¡Hola! Gracias por comunicarte con Cima Propiedades 🏠 ¿Estás buscando comprar o arrendar?</div>
+      <div class="wa-bubble in"><span class="wa-sender">🤖 Salesbot Cima</span>¡Hola! Gracias por comunicarte con Cima Propiedades 🏠 ¿En qué comuna te gustaría buscar y estás buscando comprar o arrendar?</div>
     `;
   } else if (botType === 'Credito') {
     mount.innerHTML = `
-      <div class="wa-bubble in"><span class="wa-sender">🤖 Calificador Hipotecario</span>¡Hola! Para asesorarte con la mejor propiedad: ¿Cuentas con pre-aprobación bancaria o pagarías al contado?</div>
+      <div class="wa-bubble in"><span class="wa-sender">🤖 Calificador Hipotecario</span>¡Hola! Para asesorarte con la propiedad ideal: ¿Cuentas con crédito hipotecario pre-aprobado, subsidio o comprarías al contado?</div>
     `;
   } else {
     mount.innerHTML = `
-      <div class="wa-bubble in"><span class="wa-sender">🤖 Agendador Cima</span>¡Hola! Tenemos disponibilidad para coordinar visita este jueves a las 16:00 o sábado a las 11:00. ¿Cuál te acomoda?</div>
+      <div class="wa-bubble in"><span class="wa-sender">🤖 Agendador Cima</span>¡Hola! Tenemos disponibilidad para coordinar visita este jueves a las 16:00 o sábado a las 11:00. ¿Cuál horario te acomoda más?</div>
     `;
   }
   document.getElementById('botSimulatorModalOverlay')?.classList.add('active');
+}
+
+// Analizador de entidades y lenguaje natural para bots comerciales
+function analyzeClientMessageIntents(text) {
+  const t = text.toLowerCase();
+
+  // Detección de comunas
+  const comunas = ['concepcion', 'concepción', 'san pedro', 'san pedro de la paz', 'coronel', 'chiguayante', 'hualpen', 'hualpén', 'talcahuano', 'penco', 'tome', 'tomé', 'lota', 'los angeles', 'los ángeles', 'chillan', 'chillán'];
+  let foundComuna = null;
+  for (const c of comunas) {
+    if (t.includes(c)) {
+      foundComuna = c.charAt(0).toUpperCase() + c.slice(1);
+      if (foundComuna.toLowerCase().includes('san pedro')) foundComuna = 'San Pedro de la Paz';
+      if (foundComuna.toLowerCase().includes('concepci')) foundComuna = 'Concepción';
+      if (foundComuna.toLowerCase().includes('hualp')) foundComuna = 'Hualpén';
+      break;
+    }
+  }
+
+  // Detección de tipo de inmueble
+  let foundType = null;
+  if (/casa|casas/i.test(t)) foundType = 'casa';
+  else if (/depto|deptos|departamento|departamentos/i.test(t)) foundType = 'departamento';
+  else if (/parcela|parcelas|terreno|terrenos|sitio|sitios/i.test(t)) foundType = 'parcela o terreno';
+  else if (/oficina|local|bodega/i.test(t)) foundType = 'inmueble comercial';
+
+  // Detección de operación
+  let foundOp = null;
+  if (/comprar|compra|adquirir|invertir|inversion|inversión/i.test(t)) foundOp = 'comprar';
+  else if (/arrendar|arriendo|alquilar|alquiler/i.test(t)) foundOp = 'arrendar';
+
+  // Detección de financiamiento
+  const hasCredit = /credito|crédito|hipotecario|banco|preaprobado|pre-aprobado/i.test(t);
+  const hasSubsidy = /subsidio|ds19|ds01|ds49/i.test(t);
+  const hasCash = /contado|efectivo/i.test(t);
+
+  // Detección de intervención humana requerida
+  const needsHuman = /humano|persona|asesor|asesora|captadora|llamenme|llámenme|telefono|teléfono|llamar|contraoferta|oferta|negociar|rebaja|descuento|queja|reclamo|comision|comisión|urgente|hablar con alguien/i.test(t);
+
+  return { foundComuna, foundType, foundOp, hasCredit, hasSubsidy, hasCash, needsHuman };
 }
 
 document.getElementById('btnSendBotSim')?.addEventListener('click', () => {
@@ -10211,123 +10692,201 @@ document.getElementById('btnSendBotSim')?.addEventListener('click', () => {
   mount.innerHTML += `<div class="wa-bubble out">${sanitize(text)}</div>`;
   botSimStep++;
 
+  // Indicador escribiendo...
+  const typingId = 'bot_typing_' + Date.now();
+  mount.innerHTML += `<div class="wa-bubble in" id="${typingId}"><span class="wa-sender">🤖 Salesbot Cima</span><em>Escribiendo...</em></div>`;
+  mount.scrollTop = mount.scrollHeight;
+
   setTimeout(() => {
+    const analysis = analyzeClientMessageIntents(text);
     let reply = '';
-    if (activeSimBotType === 'Bienvenida') {
-      if (botSimStep === 1) reply = '¡Excelente! ¿En qué comuna te gustaría buscar y cuál es tu rango de presupuesto aproximado?';
-      else reply = '¡Perfecto! Ya registré tus preferencias en el CRM. La captadora te enviará opciones de cartera de inmediato.';
+    let escalateBadge = '';
+
+    if (analysis.needsHuman) {
+      reply = `Entendido perfectamente. Para entregarte una atención personalizada y resolver tu solicitud detalladamente, he pausado el bot y generado una <strong>alerta de intervención humana prioritaria 🚨</strong>. Nuestra asesora inmobiliaria se comunicará contigo a la brevedad.`;
+      escalateBadge = `<div style="background:var(--red-bg); color:var(--red); padding:4px 10px; border-radius:6px; font-size:12px; font-weight:700; margin-top:8px;">🚨 Bot Pausado · Derivado a Atención Humana Prioritaria</div>`;
+    } else if (activeSimBotType === 'Bienvenida') {
+      if (analysis.foundComuna && analysis.foundType) {
+        reply = `¡Excelente elección! Veo que buscas ${analysis.foundOp || 'buscar'} una <strong>${analysis.foundType} en ${analysis.foundComuna}</strong> 🏡. En Cima Propiedades contamos con alternativas disponibles en ese sector. ¿Cuentas con crédito hipotecario pre-aprobado, subsidio o comprarías al contado?`;
+      } else if (analysis.foundComuna) {
+        reply = `¡Perfecto! En <strong>${analysis.foundComuna}</strong> tenemos una excelente cartera de propiedades tanto en venta como en arriendo. ¿Qué tipo de propiedad estás buscando (casa, departamento, terreno) y cuál es tu presupuesto estimado?`;
+      } else if (analysis.foundType) {
+        reply = `¡Genial! Tenemos excelentes opciones de <strong>${analysis.foundType}s</strong> disponibles. ¿En qué comuna te gustaría buscar (Concepción, San Pedro, Coronel, Chiguayante...) y cuál es tu rango de presupuesto?`;
+      } else if (analysis.hasCredit || analysis.hasSubsidy || analysis.hasCash) {
+        reply = `¡Muy buen antecedente! Con ese perfil de financiamiento es mucho más expedito gestionar opciones y visitas. ¿En qué comuna te gustaría que te enviemos alternativas?`;
+      } else if (botSimStep === 1) {
+        reply = `¡Con mucho gusto te ayudamos! Para filtrarte las mejores opciones: ¿En qué comuna te gustaría buscar y cuál es tu presupuesto aproximado?`;
+      } else {
+        reply = `¡Perfecto! He registrado tus datos de búsqueda en el CRM Cima. Nuestra asesora asignada te enviará las fichas técnicas por WhatsApp en unos minutos. 📲`;
+      }
     } else if (activeSimBotType === 'Credito') {
-      if (botSimStep === 1) reply = 'Entendido. ¿Con qué porcentaje de pie cuentas aproximadamente?';
-      else reply = 'Genial, tu perfil califica para tramitación bancaria preferente. Pasamos tu ficha a documentación.';
+      if (analysis.hasCredit) {
+        reply = `¡Excelente! Contar con crédito pre-aprobado te permite reservar de inmediato y congelar el valor. ¿De qué monto aproximado es tu pre-aprobación o en qué banco la gestionaste?`;
+      } else if (analysis.hasSubsidy) {
+        reply = `¡Perfecto! Trabajamos con propiedades que admiten subsidio habitacional (DS19 y DS01). ¿Tienes el certificado en mano o estás en proceso de postulación?`;
+      } else if (analysis.hasCash) {
+        reply = `Excelente, la compra al contado agiliza la firma de escritura a menos de 20 días. ¿Qué rango de valor buscas para presentarte opciones con cierre rápido?`;
+      } else {
+        reply = `Comprendo. En Cima Propiedades contamos con convenio directo con bancos y mutuarias para tramitar tu pre-aprobación en 48 horas sin costo adicional. ¿Te gustaría que te contacte nuestro ejecutivo financiero?`;
+      }
     } else {
-      reply = '¡Agendado con éxito! Te enviamos la confirmación con la ubicación exacta por WhatsApp.';
+      reply = `¡Excelente! He agendado la visita en nuestro sistema para esa fecha. Te enviaremos la confirmación formal con la ubicación exacta por WhatsApp. ¡Gracias por contactar a Cima Propiedades! 🌟`;
     }
-    mount.innerHTML += `<div class="wa-bubble in"><span class="wa-sender">🤖 Salesbot Cima</span>${reply}</div>`;
+
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) {
+      typingEl.innerHTML = `<span class="wa-sender">🤖 Salesbot Cima</span>${reply}${escalateBadge}`;
+    }
     mount.scrollTop = mount.scrollHeight;
-  }, 600);
+  }, 700);
 });
 
 document.getElementById('btnCreateCustomBot')?.addEventListener('click', () => {
-  showToast('Constructor de bots personalizado activo. Puedes configurar las preguntas en las plantillas.');
+  showToast('Constructor de bots activo. Puedes configurar las preguntas en la pestaña Plantillas.');
 });
 
-// --- DIFUSIONES MASIVAS (BROADCASTS) ---
+// --- DIFUSIONES MASIVAS (BROADCASTS) CON FILTRO POR PROPIEDAD ---
+function populateBroadcastPropertyFilter() {
+  const sel = document.getElementById('bcastPropertyFilter');
+  if (!sel || sel.dataset.populated) return;
+  sel.dataset.populated = '1';
+
+  const props = state.properties || [];
+  props.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id || p.name;
+    opt.textContent = `🏠 ${p.name || 'Propiedad'} (${formatMoney(p.price, p.priceCurrency || 'CLP')}) - ${p.address || 'Concepción'}`;
+    sel.appendChild(opt);
+  });
+}
+
 function updateBroadcastRecipientCount() {
-  const filter = document.getElementById('bcastTargetFilter')?.value || 'all_active';
+  populateBroadcastPropertyFilter();
+  const propFilter = document.getElementById('bcastPropertyFilter')?.value || 'all';
+  const targetFilter = document.getElementById('bcastTargetFilter')?.value || 'all_active';
   const leads = state.leads || [];
-  let matched = [];
-  if (filter === 'all_active') matched = leads.filter(l => !stageIsClosed(l.stage));
-  else if (filter === 'stage_seguimiento') matched = leads.filter(l => l.stage === 'Seguimiento');
-  else if (filter === 'stage_primer_contacto') matched = leads.filter(l => l.stage === 'Primer Contacto');
-  else if (filter === 'tag_vip') matched = leads.filter(l => (l.tags || []).some(t => t.toLowerCase().includes('vip')));
-  else matched = leads.filter(l => l.channel === 'WhatsApp');
+
+  let matched = leads.filter(l => {
+    // Filtro por propiedad si se especificó una
+    if (propFilter !== 'all') {
+      const p = (state.properties || []).find(pr => pr.id === propFilter || pr.name === propFilter);
+      const pName = p ? p.name.toLowerCase() : propFilter.toLowerCase();
+      const leadProp = (l.property || '').toLowerCase();
+      const matchProp = (l.propertyId && l.propertyId === propFilter) || (leadProp && leadProp.includes(pName));
+      if (!matchProp) return false;
+    }
+
+    // Filtro por etapa o segmento
+    if (targetFilter === 'all_active') return !stageIsClosed(l.stage);
+    if (targetFilter === 'stage_desistio') return l.stage === 'Desistió';
+    if (targetFilter === 'stage_seguimiento') return l.stage === 'Seguimiento';
+    if (targetFilter === 'stage_primer_contacto') return l.stage === 'Primer Contacto';
+    if (targetFilter === 'stage_visita') return l.stage === 'Se realizo visita' || l.stage === 'Se realizó visita';
+    if (targetFilter === 'tag_vip') return (l.tags || []).some(t => t.toLowerCase().includes('vip'));
+    if (targetFilter === 'channel_whatsapp') return l.channel === 'WhatsApp';
+    return true;
+  });
 
   const countEl = document.getElementById('bcastRecipientCount');
   if (countEl) countEl.textContent = `${matched.length} contactos`;
+  window.lastBroadcastMatchedLeads = matched;
   return matched;
 }
 
+document.getElementById('bcastPropertyFilter')?.addEventListener('change', updateBroadcastRecipientCount);
 document.getElementById('bcastTargetFilter')?.addEventListener('change', updateBroadcastRecipientCount);
+
+// Botones de plantillas rápidas para difusiones
+document.getElementById('btnBcastTplPriceDrop')?.addEventListener('click', () => {
+  const propSelect = document.getElementById('bcastPropertyFilter');
+  const prop = (state.properties || []).find(p => p.id === propSelect?.value || p.name === propSelect?.value);
+  const pName = prop ? prop.name : 'la propiedad de tu consulta';
+  const pPrice = prop ? formatMoney(prop.price, prop.priceCurrency || 'CLP') : '$[nuevo precio]';
+
+  const tpl = `Hola {{nombre}}, te escribimos de Cima Propiedades. Queremos informarte que la propiedad "${pName}" que consultaste acaba de tener una importante rebaja de precio a ${pPrice}. ¿Te gustaría que te agendemos una visita o te enviemos la ficha actualizada? — Cima Propiedades`;
+  document.getElementById('bcastMessageText').value = tpl;
+  showToast('Plantilla "¡Bajó de precio!" aplicada');
+});
+
+document.getElementById('btnBcastTplNewProp')?.addEventListener('click', () => {
+  const tpl = `Hola {{nombre}}, junto con saludarte te comentamos que acaba de ingresar a nuestra cartera una nueva propiedad muy similar a lo que estabas buscando: "{{propiedad}}". ¿Te gustaría que te enviemos fotos y ficha técnica por esta vía? — Cima Propiedades`;
+  document.getElementById('bcastMessageText').value = tpl;
+  showToast('Plantilla "Nueva propiedad" aplicada');
+});
+
+document.getElementById('btnBcastTplFollowup')?.addEventListener('click', () => {
+  const tpl = `Hola {{nombre}}, ¿cómo estás? Te escribimos de Cima Propiedades respecto a tu búsqueda de propiedades. ¿Sigues en proceso de compra/arriendo o te gustaría conocer nuevas alternativas en la zona? ¡Quedamos muy atentos!`;
+  document.getElementById('bcastMessageText').value = tpl;
+  showToast('Plantilla "Reactivación general" aplicada');
+});
 
 document.getElementById('btnLaunchBroadcast')?.addEventListener('click', () => {
   const recipients = updateBroadcastRecipientCount();
   const text = document.getElementById('bcastMessageText')?.value.trim();
-  if (!text) { showToast('Escribe el mensaje de la campaña'); return; }
-  if (!recipients.length) { showToast('No hay contactos en ese segmento'); return; }
+  if (!text) { showToast('Escribe el mensaje de la campaña antes de lanzar'); return; }
+  if (!recipients.length) { showToast('No hay contactos en los filtros seleccionados'); return; }
 
-  if (!confirm(`¿Lanzar difusión a ${recipients.length} clientes?`)) return;
+  if (!confirm(`¿Confirmas el lanzamiento de la difusión a ${recipients.length} clientes seleccionados?`)) return;
 
   const history = document.getElementById('bcastHistoryList');
   if (history) {
-    history.innerHTML = `<div class="log-item"><span class="log-text">📣 Difusión: "${text.slice(0, 30)}..." · ${recipients.length} contactos</span><span class="log-date">Hoy · En cola de envío</span></div>` + history.innerHTML;
+    history.innerHTML = `<div class="log-item" style="padding:10px 12px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <strong style="color:var(--gold);">📣 Difusión: "${escapeHtml(text.slice(0, 38))}..."</strong>
+        <div class="hint" style="margin-top:2px;">Destinatarios: ${recipients.length} contactos · Encolada para envío vía WhatsApp</div>
+      </div>
+      <span style="background:var(--green-bg); color:var(--green); font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700;">En proceso</span>
+    </div>` + history.innerHTML;
   }
-  showToast(`🚀 Campaña lanzada con éxito a ${recipients.length} destinatarios`);
+  showToast(`🚀 Campaña encolada y lanzada con éxito a ${recipients.length} destinatarios`);
 });
 
 document.getElementById('btnPreviewBroadcastRecipients')?.addEventListener('click', () => {
   const list = updateBroadcastRecipientCount();
-  alert(`Destinatarios seleccionados (${list.length}):\n` + list.slice(0, 10).map(l => `• ${l.name || 'Sin nombre'} (${l.phone || 'Sin fono'})`).join('\n') + (list.length > 10 ? '\n... y más' : ''));
-});
-
-// --- COMPAÑÍAS / INMOBILIARIAS ALIADAS ---
-let companiesList = [
-  { id: 'c1', name: 'Inmobiliaria Aconcagua', rut: '76.123.456-7', type: 'Inmobiliaria / Constructora', contact: 'Marcelo Morales', phone: '+56 9 8765 4321', email: 'convenios@aconcagua.cl', terms: '2% venta proyectos nuevos' },
-  { id: 'c2', name: 'Banco Santander Convenios', rut: '97.036.000-K', type: 'Banco / Mutuaria', contact: 'Lorena Valenzuela', phone: '+56 9 9123 4567', email: 'hipotecario@santander.cl', terms: 'Derivación rápida de créditos' },
-  { id: 'c3', name: 'Corredores Biobío Canje', rut: '77.890.123-4', type: 'Corredora Aliada (Canje)', contact: 'Andrés Pinto', phone: '+56 9 7654 3210', email: 'canjes@biobioprop.cl', terms: '50% split en arriendo y venta' }
-];
-
-function renderCompaniesList() {
-  const container = document.getElementById('companiesListContainer');
-  if (!container) return;
-  const q = (document.getElementById('searchCompanies')?.value || '').toLowerCase();
-  const filtered = companiesList.filter(c => `${c.name} ${c.rut} ${c.contact} ${c.type}`.toLowerCase().includes(q));
-
-  if (!filtered.length) {
-    container.innerHTML = '<div class="empty-hint">No hay compañías que coincidan con la búsqueda.</div>';
-    return;
+  let modal = document.getElementById('bcastRecipientsModalOverlay');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'bcastRecipientsModalOverlay';
+    modal.className = 'cima-modal-overlay';
+    modal.innerHTML = `
+      <div class="cima-modal" style="max-width:540px; text-align:left; padding:22px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+          <h3 style="margin:0; font-size:16px;">Destinatarios Calificados (<span id="bcastModalCount">0</span>)</h3>
+          <button type="button" class="ghost small" id="btnCloseBcastModal">✕</button>
+        </div>
+        <p class="hint" style="font-size:12px; margin:0 0 10px;">Puedes desmarcar contactos específicos si no deseas incluirlos en este envío.</p>
+        <div id="bcastRecipientsChecklist" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; margin-bottom:16px;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="primary small" id="btnConfirmBcastRecipients">Confirmar Destinatarios</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.querySelector('#btnCloseBcastModal')?.addEventListener('click', ()=>modal.classList.remove('active'));
+    modal.querySelector('#btnConfirmBcastRecipients')?.addEventListener('click', ()=>modal.classList.remove('active'));
+    modal.addEventListener('click', (e)=>{ if(e.target===modal) modal.classList.remove('active'); });
   }
 
-  container.innerHTML = filtered.map(c => `
-    <div class="crm-source-card" style="text-align:left;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
-        <div>
-          <strong style="font-size:15px; color:var(--text);">${sanitize(c.name)}</strong>
-          <span style="background:var(--gold-bg); color:var(--gold); padding:2px 7px; border-radius:8px; font-size:11px; margin-left:6px;">${sanitize(c.type)}</span>
-          <div class="hint" style="margin:4px 0 0;">RUT: ${sanitize(c.rut)} · Contacto: <strong>${sanitize(c.contact)}</strong> (📞 ${sanitize(c.phone)})</div>
-          <div style="font-size:12px; color:var(--green); margin-top:4px;">🤝 Convenio: ${sanitize(c.terms)}</div>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <a href="tel:${safeUrl(c.phone)}" class="ghost small">📞 Llamar</a>
-          <a href="mailto:${safeUrl(c.email)}" class="ghost small">✉️ Correo</a>
-        </div>
-      </div>
-    </div>
-  `).join('');
-}
-
-document.getElementById('btnOpenAddCompanyModal')?.addEventListener('click', () => {
-  openModalById('addCompanyModalOverlay');
+  document.getElementById('bcastModalCount').textContent = list.length;
+  const mount = document.getElementById('bcastRecipientsChecklist');
+  if (mount) {
+    if (!list.length) {
+      mount.innerHTML = '<div class="crm-empty" style="padding:16px;">No hay contactos con estos filtros.</div>';
+    } else {
+      mount.innerHTML = list.map(l => `
+        <label style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg-panel-2); border-radius:6px; font-size:13px; cursor:pointer;">
+          <input type="checkbox" checked data-bcast-lead-id="${escapeAttr(l.id)}">
+          <div style="flex:1;">
+            <strong>${escapeHtml(l.name || 'Sin nombre')}</strong> (${escapeHtml(l.phone || 'Sin fono')})
+            <div class="hint" style="font-size:11.5px;">🏠 ${escapeHtml(l.property || 'General')} · Etapa: ${escapeHtml(l.stage)}</div>
+          </div>
+        </label>
+      `).join('');
+    }
+  }
+  modal.classList.add('active');
 });
-document.getElementById('btnSaveCompany')?.addEventListener('click', () => {
-  const name = document.getElementById('compName').value.trim();
-  if (!name) { showToast('Ingresa el nombre de la empresa'); return; }
-  companiesList.unshift({
-    id: uid(),
-    name,
-    rut: document.getElementById('compRut').value.trim(),
-    type: document.getElementById('compType').value,
-    contact: document.getElementById('compContact').value.trim(),
-    phone: document.getElementById('compPhone').value.trim(),
-    email: document.getElementById('compEmail').value.trim(),
-    terms: document.getElementById('compTerms').value.trim()
-  });
-  closeCimaModal('addCompanyModalOverlay');
-  renderCompaniesList();
-  showToast('Compañía registrada exitosamente ✅');
-});
-document.getElementById('searchCompanies')?.addEventListener('input', renderCompaniesList);
 
-// --- AGENTE DE IA (CIMA BRAIN) ---
+// --- AGENTE DE IA (CIMA BRAIN) CON ACCESO A PROPIEDADES REALES Y LEADS ---
 function askAiPrompt(query) {
   const inp = document.getElementById('aiUserInput');
   if (inp) {
@@ -10347,26 +10906,72 @@ async function handleAiAgentQuery() {
 
   // Placeholder pensando
   const thinkingId = 'ai_thinking_' + Date.now();
-  thread.innerHTML += `<div class="wa-bubble in" id="${thinkingId}"><span class="wa-sender">✨ Cima AI</span>Analizando cartera y datos...</div>`;
+  thread.innerHTML += `<div class="wa-bubble in" id="${thinkingId}"><span class="wa-sender">✨ Cima AI</span>Analizando cartera y prospectos...</div>`;
   thread.scrollTop = thread.scrollHeight;
 
-  // Respuesta contextual con los datos reales de la cartera
   setTimeout(() => {
     let answer = '';
     const qLower = query.toLowerCase();
     const props = state.properties || [];
     const leads = state.leads || [];
 
-    if (qLower.includes('bajo') || qLower.includes('presupuesto') || qLower.includes('500')) {
+    // 1. Preguntas sobre comunas específicas
+    const comunas = ['coronel', 'san pedro', 'concepcion', 'concepción', 'chiguayante', 'hualpen', 'hualpén', 'talcahuano', 'penco', 'lota'];
+    const comunaMatch = comunas.find(c => qLower.includes(c));
+
+    if (comunaMatch) {
+      const norm = comunaMatch.replace(/concepcion|concepción/i, 'Concepción').replace(/san pedro/i, 'San Pedro').replace(/coronel/i, 'Coronel').replace(/chiguayante/i, 'Chiguayante').replace(/hualpen|hualpén/i, 'Hualpén');
+      const matchedProps = props.filter(p => `${p.name} ${p.address} ${p.description || ''}`.toLowerCase().includes(comunaMatch));
+      if (matchedProps.length) {
+        answer = `Encontré **${matchedProps.length} propiedades** en el sector de **${norm}**:\n\n` +
+          matchedProps.slice(0, 4).map(p => `• **${p.name}**\n  📍 ${p.address || norm} · 💰 ${formatMoney(p.price, p.priceCurrency || 'CLP')}\n  🛏️ ${p.bedrooms || '—'} dorms · 🚿 ${p.bathrooms || '—'} baños`).join('\n\n') +
+          `\n\n¿Deseas que prepare una propuesta para algún cliente interesado en esta zona?`;
+      } else {
+        answer = `Actualmente no tenemos propiedades cargadas con la etiqueta explícita de **${norm}**, pero disponemos de opciones en comunas aledañas del Gran Concepción. ¿Te gustaría registrar una nueva propiedad en esta comuna o filtrar por presupuesto?`;
+      }
+    }
+    // 2. Propiedades bajo presupuesto
+    else if (qLower.includes('bajo') || qLower.includes('presupuesto') || qLower.includes('500') || qLower.includes('barat')) {
       const cheap = props.filter(p => p.price && (p.price <= 500000 || p.price <= 3500));
-      answer = `Encontré **${cheap.length} propiedades** bajo ese rango:\n` + cheap.slice(0, 3).map(p => `• **${p.name}** (${formatMoney(p.price, p.priceCurrency)}) - ${p.address || 'Concepción'}`).join('\n');
-    } else if (qLower.includes('caliente') || qLower.includes('urgencia') || qLower.includes('hoy')) {
-      const hots = leads.filter(l => ['Se agendo visita', 'Se firmo Promesa', 'Seguimiento'].includes(l.stage));
-      answer = `Tus clientes con mayor probabilidad de cierre son:\n` + hots.slice(0, 3).map(l => `• **${l.name}** (${l.stage} por ${l.property || 'inmueble'}, Fono: ${l.phone || '—'})`).join('\n');
-    } else if (qLower.includes('correo') || qLower.includes('banco') || qLower.includes('redact')) {
-      answer = `Estimado(a),\nJunto con saludar, nos comunicamos de Cima Propiedades para solicitarle tenga a bien remitirnos su certificado de pre-aprobación bancaria y liquidaciones de sueldo, con el propósito de ingresar la reserva formal de la propiedad.\n\nQuedamos a su entera disposición.`;
-    } else {
-      answer = `Actualmente gestionas **${props.length} propiedades en cartera** y **${leads.length} clientes**. La tasa de conversión está en el promedio esperado. ¿Deseas que prepare una propuesta para algún cliente específico?`;
+      if (cheap.length) {
+        answer = `Encontré **${cheap.length} propiedades** bajo ese rango en la cartera activa:\n\n` + 
+          cheap.slice(0, 4).map(p => `• **${p.name}** — ${formatMoney(p.price, p.priceCurrency || 'CLP')} (${p.address || 'Gran Concepción'})`).join('\n') +
+          `\n\n💡 *Tip comercial:* Estas propiedades tienen alta demanda para familias jóvenes e inversionistas con crédito pre-aprobado.`;
+      } else {
+        answer = `En este momento las propiedades en cartera promedian valores superiores a UF 3.500 o arriendos sobre $500.000. Te sugiero revisar las opciones de canje o registrar nuevas captaciones.`;
+      }
+    }
+    // 3. Clientes calientes / urgentes / de hoy
+    else if (qLower.includes('caliente') || qLower.includes('urgencia') || qLower.includes('hoy') || qLower.includes('priorit')) {
+      const hots = leads.filter(l => ['Se agendo visita', 'Se realizo visita', 'Se firmo Promesa', 'Seguimiento'].includes(l.stage));
+      if (hots.length) {
+        answer = `Tus clientes con **mayor prioridad y probabilidad de cierre** hoy son:\n\n` + 
+          hots.slice(0, 4).map(l => `• **${l.name}** (${l.stage})\n  🏠 Interés: ${l.property || 'Inmueble general'} · 📞 ${l.phone || 'Sin fono'}\n  ⏱️ Próximo contacto: ${l.nextContact || 'Pendiente'}`).join('\n\n') +
+          `\n\nTe recomiendo enviarles un mensaje de confirmación o coordinar el borrador de promesa.`;
+      } else {
+        answer = `No tienes clientes en etapas avanzadas marcados para hoy. Es buen momento para revisar las **Secuencias Drip** y reactivar los leads de días anteriores.`;
+      }
+    }
+    // 4. Redacción de mensajes o correos
+    else if (qLower.includes('correo') || qLower.includes('banco') || qLower.includes('redact') || qLower.includes('mensaje') || qLower.includes('plantilla')) {
+      answer = `Aquí tienes una redacción profesional lista para enviar:\n\n` +
+        `*"Estimado(a),\nJunto con saludar de parte de Cima Propiedades, nos comunicamos respecto a su consulta por la propiedad en cartera. Para avanzar de manera preferente con la reserva y coordinar la visita a terreno, le agradeceremos nos pueda confirmar si cuenta con su certificado de pre-aprobación bancaria o si desea que nuestro equipo le asista en gestionarlo con nuestros bancos aliados.\n\nQuedamos muy atentos a su respuesta.*"\n\n¿Te gustaría ajustar el tono o incluir algún dato adicional?`;
+    }
+    // 5. Desempeño y métricas
+    else if (qLower.includes('tasa') || qLower.includes('cierre') || qLower.includes('lidera') || qLower.includes('desempe') || qLower.includes('metric')) {
+      const sold = leads.filter(l => l.stage === 'Vendido').length;
+      const total = leads.length;
+      const conv = total ? Math.round((sold / total) * 100) : 0;
+      answer = `📊 **Resumen de Rendimiento del Equipo Cima:**\n\n` +
+        `• Total de Prospectos en Cartera: **${total}**\n` +
+        `• Propiedades Activas: **${props.length}**\n` +
+        `• Ventas / Cierres Realizados: **${sold}**\n` +
+        `• Tasa Global de Conversión: **${conv}%**\n\n` +
+        `El ritmo de atención se encuentra en niveles saludables. Para elevar la conversión, enfócate en responder los leads de portales dentro de los primeros 15 minutos.`;
+    }
+    // 6. Consulta general
+    else {
+      answer = `Actualmente gestionas **${props.length} propiedades** y **${leads.length} clientes** en el CRM Cima.\n\nPuedes preguntarme por:\n• Propiedades en comunas específicas (ej: *"¿Qué tenemos en Coronel o San Pedro?"*)\n• Clientes prioritarios (ej: *"¿Quiénes esperan visita hoy?"*)\n• Redacción de mensajes y correos bancarios o de seguimiento.\n\n¿En qué te apoyo?`;
     }
 
     const tEl = document.getElementById(thinkingId);
@@ -10374,52 +10979,160 @@ async function handleAiAgentQuery() {
       tEl.innerHTML = `<span class="wa-sender">✨ Cima AI</span>${sanitize(answer).replace(/\n/g, '<br>')}`;
     }
     thread.scrollTop = thread.scrollHeight;
-  }, 800);
+  }, 600);
 }
 
 document.getElementById('btnSendAiQuery')?.addEventListener('click', handleAiAgentQuery);
 document.getElementById('aiUserInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') handleAiAgentQuery(); });
 
-// --- ROI & CAC CALCULATOR ---
-let roiPortalsData = [
+// --- RETORNO DE INVERSIÓN (ROI) EDITABLE EN TIEMPO REAL ---
+const DEFAULT_ROI_PORTALS_DATA = [
   { portal: 'TocToc', spend: 85000, leads: 18, won: 2, grossComm: 3400000 },
   { portal: 'Yapo.cl', spend: 45000, leads: 22, won: 1, grossComm: 1800000 },
   { portal: 'Portal Inmobiliario', spend: 120000, leads: 31, won: 3, grossComm: 5100000 },
   { portal: 'Meta Ads (Facebook/IG)', spend: 60000, leads: 25, won: 1, grossComm: 2200000 }
 ];
 
+let roiPortalsData = (() => {
+  try {
+    const saved = localStorage.getItem('cima_roi_portals_v1');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_ROI_PORTALS_DATA));
+})();
+
+function saveRoiPortalsData() {
+  try {
+    localStorage.setItem('cima_roi_portals_v1', JSON.stringify(roiPortalsData));
+  } catch(e) {}
+}
+
 function renderRoiDashboard() {
   const overview = document.getElementById('roiOverviewGrid');
   const tbody = document.getElementById('roiPortalTableBody');
   if (!overview || !tbody) return;
 
-  const totalSpend = roiPortalsData.reduce((s, p) => s + p.spend, 0);
-  const totalLeads = roiPortalsData.reduce((s, p) => s + p.leads, 0);
-  const totalComm = roiPortalsData.reduce((s, p) => s + p.grossComm, 0);
+  const totalSpend = roiPortalsData.reduce((s, p) => s + (Number(p.spend) || 0), 0);
+  const totalLeads = roiPortalsData.reduce((s, p) => s + (Number(p.leads) || 0), 0);
+  const totalWon = roiPortalsData.reduce((s, p) => s + (Number(p.won) || 0), 0);
+  const totalComm = roiPortalsData.reduce((s, p) => s + (Number(p.grossComm) || 0), 0);
   const cplGlobal = totalLeads ? Math.round(totalSpend / totalLeads) : 0;
   const roiGlobal = totalSpend ? Math.round(((totalComm - totalSpend) / totalSpend) * 100) : 0;
 
   overview.innerHTML = `
-    <div class="stat-box"><div class="stat-value">${formatMoney(totalSpend)}</div><div class="stat-label">Inversión Total en Publicidad</div></div>
+    <div class="stat-box"><div class="stat-value">${formatMoney(totalSpend)}</div><div class="stat-label">Inversión Total en Portales</div></div>
     <div class="stat-box"><div class="stat-value" style="color:var(--green);">${formatMoney(totalComm)}</div><div class="stat-label">Honorarios Generados</div></div>
     <div class="stat-box"><div class="stat-value" style="color:var(--gold);">${roiGlobal}%</div><div class="stat-label">Retorno Global (ROI)</div></div>
-    <div class="stat-box"><div class="stat-value">${formatMoney(cplGlobal)}</div><div class="stat-label">Costo por Lead Promedio (CPL)</div></div>
+    <div class="stat-box"><div class="stat-value">${formatMoney(cplGlobal)}</div><div class="stat-label">Costo por Lead (CPL) Promedio</div></div>
   `;
 
-  tbody.innerHTML = roiPortalsData.map(p => {
-    const cpl = p.leads ? Math.round(p.spend / p.leads) : 0;
-    const roi = p.spend ? Math.round(((p.grossComm - p.spend) / p.spend) * 100) : 0;
+  tbody.innerHTML = roiPortalsData.map((p, idx) => {
+    const spend = Number(p.spend) || 0;
+    const leads = Number(p.leads) || 0;
+    const won = Number(p.won) || 0;
+    const comm = Number(p.grossComm) || 0;
+    const cpl = leads ? Math.round(spend / leads) : 0;
+    const roi = spend ? Math.round(((comm - spend) / spend) * 100) : 0;
+
     return `<tr>
       <td><strong>${sanitize(p.portal)}</strong></td>
-      <td>${formatMoney(p.spend)}</td>
-      <td>${p.leads}</td>
-      <td>${formatMoney(cpl)}</td>
-      <td>${p.won}</td>
-      <td style="color:var(--green); font-weight:700;">${formatMoney(p.grossComm)}</td>
+      <td><input type="number" class="roi-live-input" data-idx="${idx}" data-field="spend" value="${spend}" style="width:110px; padding:4px 6px; font-size:13px;"></td>
+      <td><input type="number" class="roi-live-input" data-idx="${idx}" data-field="leads" value="${leads}" style="width:70px; padding:4px 6px; font-size:13px;"></td>
+      <td style="font-weight:600; color:var(--text);">${formatMoney(cpl)}</td>
+      <td><input type="number" class="roi-live-input" data-idx="${idx}" data-field="won" value="${won}" style="width:60px; padding:4px 6px; font-size:13px;"></td>
+      <td><input type="number" class="roi-live-input" data-idx="${idx}" data-field="grossComm" value="${comm}" style="width:120px; padding:4px 6px; font-size:13px; color:var(--green); font-weight:700;"></td>
       <td><span style="background:var(--green-bg); color:var(--green); padding:2px 8px; border-radius:10px; font-weight:800;">${roi}%</span></td>
+      <td><button type="button" class="ghost small" onclick="deleteRoiPortalRow(${idx})" style="padding:2px 6px;">✕</button></td>
     </tr>`;
   }).join('');
+
+  tbody.querySelectorAll('.roi-live-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const idx = Number(inp.dataset.idx);
+      const field = inp.dataset.field;
+      if (roiPortalsData[idx]) {
+        roiPortalsData[idx][field] = Number(inp.value) || 0;
+        saveRoiPortalsData();
+        renderRoiDashboard();
+      }
+    });
+  });
 }
+
+function deleteRoiPortalRow(idx) {
+  if (roiPortalsData.length <= 1) { showToast('Debe existir al menos un canal.'); return; }
+  roiPortalsData.splice(idx, 1);
+  saveRoiPortalsData();
+  renderRoiDashboard();
+}
+
+document.getElementById('btnAddRoiPortalRow')?.addEventListener('click', () => {
+  const name = prompt('Nombre del nuevo portal o canal publicitario:');
+  if (!name || !name.trim()) return;
+  roiPortalsData.push({ portal: name.trim(), spend: 50000, leads: 10, won: 1, grossComm: 1500000 });
+  saveRoiPortalsData();
+  renderRoiDashboard();
+  showToast(`Canal "${name.trim()}" agregado al análisis`);
+});
+
+document.getElementById('btnResetRoiDefaults')?.addEventListener('click', () => {
+  if (!confirm('¿Restaurar los valores de ROI por defecto?')) return;
+  roiPortalsData = JSON.parse(JSON.stringify(DEFAULT_ROI_PORTALS_DATA));
+  saveRoiPortalsData();
+  renderRoiDashboard();
+  showToast('Valores restaurados por defecto');
+});
+
+document.getElementById('btnAutoSyncRoiFromLeads')?.addEventListener('click', () => {
+  const leads = state.leads || [];
+  if (!leads.length) { showToast('No hay leads en la cartera para calcular'); return; }
+
+  // Agrupar leads por canal
+  const counts = {};
+  const wonCounts = {};
+  leads.forEach(l => {
+    const ch = (l.channel || 'Otro').toLowerCase();
+    let portalKey = 'Otro';
+    if (ch.includes('toctoc')) portalKey = 'TocToc';
+    else if (ch.includes('yapo')) portalKey = 'Yapo.cl';
+    else if (ch.includes('portalinmobiliario') || ch.includes('portal')) portalKey = 'Portal Inmobiliario';
+    else if (ch.includes('meta') || ch.includes('facebook') || ch.includes('instagram')) portalKey = 'Meta Ads (Facebook/IG)';
+
+    counts[portalKey] = (counts[portalKey] || 0) + 1;
+    if (l.stage === 'Vendido') wonCounts[portalKey] = (wonCounts[portalKey] || 0) + 1;
+  });
+
+  roiPortalsData.forEach(p => {
+    if (counts[p.portal] !== undefined) {
+      p.leads = counts[p.portal];
+      p.won = wonCounts[p.portal] || p.won;
+    }
+  });
+
+  saveRoiPortalsData();
+  renderRoiDashboard();
+  showToast('✅ Leads y ventas cerradas sincronizados desde la cartera');
+});
+
+// --- CENTRO DE INTEGRACIONES: EVENTOS DE CONFIGURACIÓN ---
+function wireIntegrationCards() {
+  document.getElementById('cardIntegPortales')?.addEventListener('click', () => {
+    goToAppView('crm-sources');
+  });
+  document.getElementById('cardIntegWhatsApp')?.addEventListener('click', () => {
+    document.getElementById('btnSideWhatsAppHub')?.click();
+  });
+  document.getElementById('cardIntegEmail')?.addEventListener('click', () => {
+    goToAppView('crm-sources');
+  });
+  document.getElementById('cardIntegInstagram')?.addEventListener('click', () => {
+    alert('📸 Integración Instagram Direct (Meta Graph API):\n\nEsta integración permite responder mensajes de Instagram Direct desde el CRM Cima y clasificar leads con IA.\n\nPara activar:\n1. Conecta tu cuenta comercial de Instagram a tu Fan Page de Facebook.\n2. Configura el Webhook en developers.facebook.com apuntando a tu URL de Supabase.\n3. Añade el token de acceso permanente en Ajustes.');
+  });
+  document.getElementById('cardIntegFacebook')?.addEventListener('click', () => {
+    alert('📘 Integración Facebook Lead Ads & Messenger:\n\nPermite captar automáticamente clientes que completan formularios de anuncios en Facebook e Instagram.\n\nPara activar:\n1. Accede al Business Manager de Meta.\n2. Suscribe tu formulario de clientes potenciales (Leadgen Webhook).\n3. Los prospectos entrarán en tiempo real con etiqueta "Meta Ads" asignándose a tus captadoras.');
+  });
+}
+setTimeout(wireIntegrationCards, 1000);
 
 // --- REPORTE DE LLAMADAS ---
 let callsRecords = [
@@ -10507,10 +11220,57 @@ function sendDesktopNotification(title, body) {
 }
 
 // ==================== ESCÁNER DE CORREOS CON IA & AVISO WHATSAPP WEB ====================
+function updateScanProgressModal(show, stepText, pct = 0, isDone = false) {
+  let modal = document.getElementById('scanProgressModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'scanProgressModal';
+    modal.className = 'cima-modal-overlay';
+    modal.innerHTML = `
+      <div class="cima-modal" style="max-width:440px; text-align:center; padding:24px;">
+        <div style="font-size:36px; margin-bottom:8px;" id="scanProgressIcon">⚡</div>
+        <h3 style="margin:0 0 6px; font-size:17px;" id="scanProgressTitle">Escaneando Correos con IA</h3>
+        <p style="font-size:13px; color:var(--text-muted); margin:0 0 16px; line-height:1.5;" id="scanProgressText">Conectando al servidor de correo Titan (IMAP)...</p>
+        <div style="background:var(--bg-panel-2); border-radius:10px; height:8px; overflow:hidden; margin-bottom:16px; border:1px solid var(--border);">
+          <div id="scanProgressBar" style="width:15%; height:100%; background:var(--gold); transition:width 0.3s ease;"></div>
+        </div>
+        <div id="scanProgressActions" style="display:none;">
+          <button type="button" class="primary small" id="btnScanProgressClose">Aceptar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.querySelector('#btnScanProgressClose')?.addEventListener('click', ()=>modal.classList.remove('active'));
+    modal.addEventListener('click', (e)=>{ if(e.target===modal && isDone) modal.classList.remove('active'); });
+  }
+
+  if (!show) {
+    modal.classList.remove('active');
+    return;
+  }
+  modal.classList.add('active');
+  const pText = modal.querySelector('#scanProgressText');
+  const pBar = modal.querySelector('#scanProgressBar');
+  const pIcon = modal.querySelector('#scanProgressIcon');
+  const pActions = modal.querySelector('#scanProgressActions');
+
+  if (pText) pText.innerHTML = stepText;
+  if (pBar) pBar.style.width = Math.min(100, Math.max(5, pct)) + '%';
+  if (isDone) {
+    if (pIcon) pIcon.textContent = '✅';
+    if (pActions) pActions.style.display = 'block';
+  } else {
+    if (pIcon) pIcon.textContent = '⏳';
+    if (pActions) pActions.style.display = 'none';
+  }
+}
+
 async function scanInboxWithAiForPortalLeads(isBackground = false) {
   const btn = document.getElementById('btnScanInboxWithAi');
   if (btn && !isBackground) { btn.disabled = true; btn.textContent = '⏳ Escaneando con IA...'; }
-  if (!isBackground) showToast('Analizando correos entrantes de TocToc y portales con IA...');
+  if (!isBackground) {
+    showToast('Iniciando escaneo inteligente de correos...');
+    updateScanProgressModal(true, 'Paso 1/3: Conectando al servidor de correo Titan (IMAP)...', 20, false);
+  }
 
   try {
     if (!supabaseClient) throw new Error('Supabase no inicializado');
@@ -10524,7 +11284,12 @@ async function scanInboxWithAiForPortalLeads(isBackground = false) {
     const messages = data?.messages || [];
     let detectedCount = 0;
 
-    for (const m of messages) {
+    if (!isBackground) {
+      updateScanProgressModal(true, `Paso 2/3: Consultando ${messages.length} correos recientes... Buscando solicitudes de TocToc, Yapo y portales.`, 50, false);
+    }
+
+    for (let i = 0; i < messages.length; i++) {
+      const m = messages[i];
       const subject = (m.subject || '').toLowerCase();
       const from = (m.from || '').toLowerCase();
 
@@ -10532,6 +11297,9 @@ async function scanInboxWithAiForPortalLeads(isBackground = false) {
       const isLeadEmail = from.includes('toctoc') || from.includes('yapo') || from.includes('portalinmobiliario') || subject.includes('solicitud') || subject.includes('contacto');
 
       if (isLeadEmail) {
+        if (!isBackground) {
+          updateScanProgressModal(true, `Paso 3/3: Analizando correo de portal con IA (${from})...`, 75, false);
+        }
         // Consultar detalle y pasar por la IA
         const detResp = await fetch(`${SUPABASE_URL}/functions/v1/listar-correo?forceFunctionRegion=us-east-1`, {
           method: 'POST',
@@ -10608,14 +11376,21 @@ async function scanInboxWithAiForPortalLeads(isBackground = false) {
     }
 
     renderCRM();
-    if (detectedCount > 0) {
-      showToast(`🎉 ¡${detectedCount} nuevo(s) lead(s) detectado(s) y añadido(s) al CRM!`);
-    } else {
-      showToast('Escaneo completado: No se encontraron nuevas solicitudes de contacto.');
+    if (!isBackground) {
+      if (detectedCount > 0) {
+        updateScanProgressModal(true, `🎉 ¡Excelente! Se detectaron <strong>${detectedCount}</strong> nuevo(s) cliente(s) de portales y se agregaron automáticamente al CRM.`, 100, true);
+        showToast(`🎉 ¡${detectedCount} nuevo(s) lead(s) añadido(s) al CRM!`);
+      } else {
+        updateScanProgressModal(true, `✅ Escaneo completado con éxito.<br>Tu bandeja está al día: no se encontraron correos nuevos de portales pendientes de procesar.`, 100, true);
+        showToast('Escaneo completado: Bandeja al día.');
+      }
     }
   } catch(err) {
     console.warn('Error escaneando correos con IA:', err);
-    showToast('No se pudo completar el escaneo automático de correos.');
+    if (!isBackground) {
+      updateScanProgressModal(true, `⚠️ No se pudo completar el escaneo automático.<br><span style="font-size:12px; color:var(--text-dim);">Detalle: ${sanitize(err.message || 'Verifica la conexión a Titan en Fuentes de leads')}</span>`, 100, true);
+      showToast('Error en la conexión con el servidor de correos.');
+    }
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '⚡ Escanear Correos con IA'; }
   }
